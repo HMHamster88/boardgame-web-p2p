@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+@import 'primeicons/primeicons.css'
+
+:root {
+  --body-bg: var(--p-surface-50);
+  --body-text-color: var(--p-surface-900);
+  --card-border: 1px solid var(--border-color);
+  --card-bg: var(--p-surface-0);
+  --border-color: var(--p-surface-200);
+  --text-color: var(--p-surface-700);
+  --overlay-background: #ffffff;
+}
+
+html,
+body {
+  margin: 0px;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--body-bg);
+  font-weight: normal;
+  color: var(--body-text-color);
+  padding: 1rem;
+}
+
+.card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  padding: 2rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.rounded-box {
+  background-color: #00000000;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.3rem;
+  margin: 0.2rem;
+  border: var(--card-border);
+}
+
+.circle {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  margin: 0.2rem;
+  border: var(--card-border);
+}
