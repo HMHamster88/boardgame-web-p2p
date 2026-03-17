@@ -1,0 +1,4 @@
+{
+    "main": "./dist/bundled/bundle.js",
+    "output": "./dist/sea/boardgame-web-p2p-server.exe"
+}

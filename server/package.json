@@ -6,7 +6,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "eslint . --ext .ts  --fix && nodemon",
     "dev": "nodemon",
-    "lint": "eslint . --ext .ts --fix"
+    "lint": "eslint . --ext .ts --fix",
+    "clean": "shx rm -rf dist",
+    "build:bundle": "node build-bundle.js",
+    "build:sea": "shx mkdir -p dist/sea && shx cp -r public dist/sea/public && node --build-sea sea-config.json",
+    "build:all": "npm run clean && npm run build:bundle && npm run build:sea"
   },
   "author": "",
   "license": "ISC",
@@ -17,6 +21,7 @@
     "@types/node-turn": "^0.0.5",
     "connect-history-api-fallback": "^2.0.0",
     "dotenv": "^17.3.1",
+    "esbuild": "^0.27.4",
     "express": "^5.2.1"
   },
   "devDependencies": {
@@ -36,6 +41,7 @@
     "express-ws": "^5.0.2",
     "node-turn": "^0.0.6",
     "nodemon": "^3.1.14",
+    "shx": "^0.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
