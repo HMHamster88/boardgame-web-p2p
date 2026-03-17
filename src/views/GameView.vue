@@ -2,10 +2,10 @@
     <Card v-if="game.players" header="Players" class="mb-2">
         {{ game.players.length }}
         <template #content>
-            <div class="flex">
+            <div class="flex items-center">
                 <Chip v-for="player in game.players" :removable="canKickPlayer(player)" style="border-radius: 8px;"
                     :class="playerClassStyle(player)" v-on:click="playerClick(player)">
-                    <div class="flex items-cente">
+                    <div class="flex items-center">
                         <div class="rounded-box" :style="playerColorStyle(player)"></div>
                         <div class="ml-1 mr-1">{{ player.name }}</div>
                         <div :class="{ 'bg-red-500': !player.online, 'bg-green-500': player.online, circle: true }"
@@ -16,6 +16,7 @@
                     </template>
                 </Chip>
                 <div class="mr-auto"></div>
+                <Badge class="mr-2" :severity="connectStatusSeverity">{{ connectStatusText }}</Badge>
                 <Button v-on:click="join" v-if="canJoin">Join</Button>
                 <Button icon="pi pi-cog" v-on:click="editPlayer" v-if="!canJoin"></Button>
             </div>
@@ -70,7 +71,7 @@ import type Game from '../db/game';
 import { GameStatusEnum, GameType } from '../db/game';
 import type { GamePublicState } from '../db/gameState';
 import type { Player } from '../db/player';
-import GameClient from '../services/gameClient';
+import GameClient, { ConnectStatus } from '../services/gameClient';
 import GameHost from '../services/gameHost';
 import getGameSerivce from '../services/gameService/gameServiceSelector';
 import type { GameService } from '../services/gameService/gameService';
@@ -91,6 +92,9 @@ const gameState = ref<GamePublicState>({
 })
 
 const playerEditDialog = useTemplateRef('playerEditDialog')
+
+const connectStatusText = ref('Connecting...')
+const connectStatusSeverity = ref('warn')
 
 let gameService: GameService
 
@@ -209,7 +213,20 @@ onBeforeUnmount(() => {
 onMounted(async () => {
     await gameHost.start()
     gameClient.on('connectStatusChanged', (status) => {
-        emitter.emit('connectStatusChanged', status)
+        switch (status) {
+            case ConnectStatus.CONNECTED:
+                connectStatusText.value = "Connected"
+                connectStatusSeverity.value = 'success'
+                break
+            case ConnectStatus.CONNECTING:
+                connectStatusText.value = "Connecting..."
+                connectStatusSeverity.value = 'warn'
+                break
+            case ConnectStatus.DISCONNECTED:
+                connectStatusText.value = "Disconnected"
+                connectStatusSeverity.value = 'danger'
+                break
+        }
     })
 
     gameClient.on("ErorrGameMessage", (message) => {
