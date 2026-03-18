@@ -21,3 +21,17 @@ export function removeElement<T>(array: Array<T>, element: T): boolean {
 export function inti2DArray<T>(rows: number, columns: number, defaultValue: T) {
     return Array(rows).fill(defaultValue).map(() => Array(columns).fill(defaultValue))
 }
+
+export function getShuffledArray<T>(array: T[]): T[] {
+    const newArr = [...array]; // Create a shallow copy
+    let currentIndex = newArr.length;
+    let randomIndex;
+
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [newArr[currentIndex], newArr[randomIndex]] = [newArr[randomIndex]!, newArr[currentIndex]!];
+    }
+
+    return newArr;
+};

@@ -2,7 +2,7 @@ import type { Player } from "./player";
 
 export enum GameType {
     TIC_TAC_TOE = "TIC_TAC_TOE",
-    CATAN = "CATAN",
+    CARDS_AGAINST_HUMANITY = "CARDS_AGAINST_HUMANITY",
 }
 
 export enum GameStatusEnum {

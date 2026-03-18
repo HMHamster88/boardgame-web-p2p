@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { v4 as uuidv4 } from 'uuid'
+
 
 export interface User {
     id: string,
@@ -16,7 +16,7 @@ export const useLocalStore = defineStore(
     {
         state: (): LocalStore => ({
             user: {
-                id: uuidv4(),
+                id: '',
                 name: 'User',
                 color: '#FF0000'
             }

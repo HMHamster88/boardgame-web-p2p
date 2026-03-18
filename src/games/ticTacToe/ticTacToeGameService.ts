@@ -52,7 +52,7 @@ export class TicTacToeGameService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction): void {
+    performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string): void {
         if (game.status != GameStatusEnum.STARTED) {
             return
         }

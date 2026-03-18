@@ -3,18 +3,25 @@
         {{ game.players.length }}
         <template #content>
             <div class="flex items-center">
-                <Chip v-for="player in game.players" :removable="canKickPlayer(player)" style="border-radius: 8px;"
-                    :class="playerClassStyle(player)" v-on:click="playerClick(player)">
-                    <div class="flex items-center">
-                        <div class="rounded-box" :style="playerColorStyle(player)"></div>
-                        <div class="ml-1 mr-1">{{ player.name }}</div>
-                        <div :class="{ 'bg-red-500': !player.online, 'bg-green-500': player.online, circle: true }"
-                            v-tooltip="player.online ? 'Online' : 'Offline'"></div>
-                    </div>
-                    <template #removeicon="">
-                        <i class="pi pi-times-circle p-chip-remove-icon" @click="kickPlayer(player)" />
-                    </template>
-                </Chip>
+                <div class="players-container">
+                    <Chip v-for="player, index in game.players" :removable="canKickPlayer(player)"
+                        :class="playerClassStyle(player)" v-on:click="playerClick(player)">
+                        <div>
+                            <div class="flex items-center" v-tooltip="'Points: 1'">
+                                <div class="rounded-box" :style="playerColorStyle(player)"></div>
+                                <div class="ml-1 mr-1">{{ player.name }}</div>
+                                <div :class="{ 'bg-red-500': !player.online, 'bg-green-500': player.online, circle: true }"
+                                    v-tooltip="player.online ? 'Online' : 'Offline'"></div>
+                                <br>
+                            </div>
+                            <div v-if="playersPoints[index] != null" style="text-align: center;">Points: {{
+                                playersPoints[index] }}</div>
+                        </div>
+                        <template #removeicon="">
+                            <i class="pi pi-times-circle p-chip-remove-icon" @click="kickPlayer(player)" />
+                        </template>
+                    </Chip>
+                </div>
                 <div class="mr-auto"></div>
                 <Badge class="mr-2" :severity="connectStatusSeverity">{{ connectStatusText }}</Badge>
                 <Button v-on:click="join" v-if="canJoin">Join</Button>
@@ -51,8 +58,8 @@
     <Card v-if="showGameView">
         <template #content>
             <component :is="gameViewComponent" class="tab" :game="game" :gameState="gameState"
-                :localPlayerIndex="localPlayerIndex" :players="game.players" ref="gameView"
-                @performAction="peformGameAction">
+                :playerPrivateState="playerPrivateState" :localPlayerIndex="localPlayerIndex" :players="game.players"
+                ref="gameView" @performAction="peformGameAction">
 
             </component>
         </template>
@@ -69,7 +76,7 @@ import { useLocalStore } from '../services/localStore'
 import type Game from '../db/game';
 
 import { GameStatusEnum, GameType } from '../db/game';
-import type { GamePublicState } from '../db/gameState';
+import type { PlayerPrivateState, GamePublicState } from '../db/gameState';
 import type { Player } from '../db/player';
 import GameClient, { ConnectStatus } from '../services/gameClient';
 import GameHost from '../services/gameHost';
@@ -91,6 +98,17 @@ const gameState = ref<GamePublicState>({
     winnersIds: []
 })
 
+
+const playerPrivateState = ref<PlayerPrivateState>({
+    playerId: localStore.user.id
+})
+
+const playersPoints = computed(() => {
+    return game.value.players.map(player => {
+        return gameState.value.playersStates?.find(pl => pl.playerId == player.userId)?.points
+    })
+})
+
 const playerEditDialog = useTemplateRef('playerEditDialog')
 
 const connectStatusText = ref('Connecting...')
@@ -100,7 +118,7 @@ let gameService: GameService
 
 function playerClassStyle(player: Player) {
     return {
-        "mr-1": true,
+        "player": true,
         "active-player": player == activePlayer.value
     }
 }
@@ -139,7 +157,7 @@ const activePlayer = computed(() => {
 })
 
 const canJoin = computed(() => {
-    return game.value.players.length < game.value.settings.maxPlayers && !localPlayer.value
+    return game.value.players.length < game.value.settings.maxPlayers && !localPlayer.value && game.value.status == GameStatusEnum.CREATED
 })
 
 const isGameOwner = computed(() => {
@@ -171,7 +189,7 @@ function startGame() {
 }
 
 function canKickPlayer(player: Player): boolean {
-    return player.userId == localStore.user.id// || game.value.owner.id == authStore.user.id
+    return player.userId == localStore.user.id
 }
 
 function kickPlayer(player: Player) {
@@ -252,6 +270,11 @@ onMounted(async () => {
         return gameState.value
     }
 
+    gameClient.playerPrivateStateSync.valueSetter = (value) => {
+        playerPrivateState.value = value
+        return playerPrivateState.value
+    }
+
     await gameClient.start()
 })
 
@@ -266,9 +289,18 @@ onBeforeRouteLeave(() => {
 
 </script>
 
-<style>
+<style scoped>
+.players-container {
+    gap: 1rem;
+}
+
 .active-player {
     border: solid;
     border-color: rgb(0, 123, 255);
+}
+
+.player {
+    border-radius: 8px;
+    margin: 0.2rem;
 }
 </style>

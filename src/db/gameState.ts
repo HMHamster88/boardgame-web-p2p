@@ -1,5 +1,6 @@
 export interface PlayerPublicState {
     playerId: string
+    points: number | null
 }
 
 export interface PlayerPrivateState {

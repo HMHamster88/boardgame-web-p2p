@@ -7,7 +7,7 @@ import type { GameAction } from "../messages"
 export interface GameService {
     createGame(props: CrateGameProps): Game
     startGame(game: Game): GameState
-    performAction(game: Game, gameState: GameState, gameAction: GameAction): void
+    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string): void
     readonly settingsComponent: Component
     readonly gameViewComponent: Component
 }

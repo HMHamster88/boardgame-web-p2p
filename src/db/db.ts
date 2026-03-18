@@ -42,5 +42,8 @@ export default {
     },
     getGameState(id: string) {
         return db.get('states', id)
+    },
+    deleteGameState(id: string) {
+        return db.delete('states', id)
     }
 };

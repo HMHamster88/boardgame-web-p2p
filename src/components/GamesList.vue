@@ -68,6 +68,7 @@ function deleteGame(game: Game) {
                 return
             }
             await db.deleteGame(game.id)
+            await db.deleteGameState(game.id)
             loadGames()
         }
     })

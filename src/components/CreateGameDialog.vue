@@ -37,8 +37,8 @@ const gameTypes = ref<GameStringType[]>([
         value: GameType.TIC_TAC_TOE
     },
     {
-        name: 'Catan',
-        value: GameType.CATAN
+        name: 'Cards Against Humanity',
+        value: GameType.CARDS_AGAINST_HUMANITY
     }
 ])
 

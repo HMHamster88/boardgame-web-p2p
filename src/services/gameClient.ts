@@ -13,7 +13,7 @@ import type { Player } from "../db/player";
 import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import { ObjectSync } from "../p2p/objectSync";
 import type Game from "../db/game";
-import type { GamePublicState } from "../db/gameState";
+import type { GamePublicState, PlayerPrivateState } from "../db/gameState";
 import { SignalErrorType } from "../../server/src/messages";
 
 export enum ConnectStatus {
@@ -34,8 +34,9 @@ interface GameClientEvents {
 export default class GameClient extends EventEmitter<GameClientEvents> {
     private gameId: string;
     private userId: string;
-    gameObjectSync!: ObjectSync<Game>
-    gamePublicStateSync!: ObjectSync<GamePublicState>
+    gameObjectSync: ObjectSync<Game>
+    gamePublicStateSync: ObjectSync<GamePublicState>
+    playerPrivateStateSync: ObjectSync<PlayerPrivateState>
     connection!: P2PConnection
     connectStatus: ConnectStatus = ConnectStatus.CONNECTING
 
@@ -52,6 +53,7 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
         this.connection = new P2PConnection(this.userId, 'gameboard', p2pDefaultConfig)
         this.gameObjectSync = new ObjectSync<Game>(this.connection, 'game', false, null, null)
         this.gamePublicStateSync = new ObjectSync<GamePublicState>(this.connection, 'gamePublicState', false, null, null)
+        this.playerPrivateStateSync = new ObjectSync<PlayerPrivateState>(this.connection, 'playerPrivateState:' + userId, false, null, null)
 
         this.connection.on('dataMessage', (_peerId, message) => {
             const gameMessage = JSON.parse(message) as GameMessage
