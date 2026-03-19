@@ -1,8 +1,11 @@
 <template>
     <Card class="card">
-        <template #title>Local Games</template>
+        <template #title>{{ t('localGames') }}</template>
         <template #content>
-            <DataView :value="games">
+            <DataView :value="games" class="mb-2">
+                <template #empty>
+                    {{ t('noGames') }}
+                </template>
                 <template #list="slotProps">
                     <div class="flex flex-col">
                         <div v-for="(game, index) in slotProps.items" :key="index">
@@ -12,7 +15,7 @@
                                 </label>
                                 <div style=""></div>
                                 <Button class="mr-1" as="router-link" :to="'/games/' + game.id">
-                                    View
+                                    {{ t('go') }}
                                 </Button>
                                 <Button icon="pi pi-times" severity="secondary" @click="deleteGame(game)">
 
@@ -23,15 +26,18 @@
                 </template>
             </DataView>
             <div class="flex items-center">
-                <Button @click="createGame">Create</Button>
+                <Button @click="createGame">{{ t('create') }}</Button>
             </div>
         </template>
     </Card>
 
     <Card class="card">
-        <template #title>Hosted Games</template>
+        <template #title>{{ t('hostedGames') }}</template>
         <template #content>
             <DataView :value="gameObserver.games.value">
+                <template #empty>
+                    {{ t('noGames') }}
+                </template>
                 <template #list="slotProps">
                     <div class="flex flex-col">
                         <div v-for="(game, index) in slotProps.items" :key="index">
@@ -41,7 +47,7 @@
                                 </label>
                                 <div style=""></div>
                                 <Button class="mr-1" as="router-link" :to="'/games/' + game.id">
-                                    View
+                                    {{ t('go') }}
                                 </Button>
                             </div>
                         </div>
@@ -63,6 +69,31 @@ import CreateGameDialog from '../components/CreateGameDialog.vue';
 import db from '../db/db';
 import GameObserver from '../services/gameObserver';
 import { useLocalStore } from '../services/localStore';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n({
+    locale: 'en',
+    messages: {
+        en: {
+            localGames: 'Local Games',
+            create: 'Create',
+            go: 'Go',
+            hostedGames: 'Launched games',
+            deleteGameTitle: 'Delete Game',
+            deleteGameMessage: 'Delete game "{gameName}"?',
+            noGames: 'No Games'
+        },
+        ru: {
+            localGames: 'Локальные игры',
+            create: 'Создать',
+            go: 'Перейти',
+            hostedGames: 'Запущенные игры',
+            deleteGameTitle: 'Удалить игру',
+            deleteGameMessage: 'Удалить игру "{gameName}"?',
+            noGames: 'Нет игр'
+        }
+    }
+})
 
 const localStore = useLocalStore();
 
@@ -89,8 +120,8 @@ async function createGame() {
 
 function deleteGame(game: Game) {
     emitter.emit('confirm', {
-        title: 'Delete game',
-        message: `Delete "${game.name}" game?`,
+        title: t('deleteGameTitle'),
+        message: t('deleteGameMessage', { gameName: game.name }),
         closed: async (result: boolean) => {
             if (!result) {
                 return

@@ -1,6 +1,6 @@
 <template>
     <div class="flex-auto">
-        <label for="pointsToWin" class="font-bold block mb-2">Points to win</label>
+        <label for="pointsToWin" class="font-bold block mb-2">{{ $t('pointsToWin') }}</label>
         <InputNumber v-model="settings.pointsToWin" inputId="pointsToWin" fluid :min="2" :max="20" />
     </div>
 </template>

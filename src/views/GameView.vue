@@ -7,15 +7,15 @@
                     <Chip v-for="player, index in game.players" :removable="canKickPlayer(player)"
                         :class="playerClassStyle(player)" v-on:click="playerClick(player)">
                         <div>
-                            <div class="flex items-center" v-tooltip="'Points: 1'">
+                            <div class="flex items-center">
                                 <div class="rounded-box" :style="playerColorStyle(player)"></div>
                                 <div class="ml-1 mr-1">{{ player.name }}</div>
                                 <div :class="{ 'bg-red-500': !player.online, 'bg-green-500': player.online, circle: true }"
                                     v-tooltip="player.online ? 'Online' : 'Offline'"></div>
                                 <br>
                             </div>
-                            <div v-if="playersPoints[index] != null" style="text-align: center;">Points: {{
-                                playersPoints[index] }}</div>
+                            <div v-if="playersPoints[index] != null" style="text-align: center;">
+                                {{ t('playerPoints', { points: playersPoints[index] }) }}</div>
                         </div>
                         <template #removeicon="">
                             <i class="pi pi-times-circle p-chip-remove-icon" @click="kickPlayer(player)" />
@@ -24,7 +24,7 @@
                 </div>
                 <div class="mr-auto"></div>
                 <Badge class="mr-2" :severity="connectStatusSeverity">{{ connectStatusText }}</Badge>
-                <Button v-on:click="join" v-if="canJoin">Join</Button>
+                <Button v-on:click="join" v-if="canJoin">{{ t('join') }}</Button>
                 <Button icon="pi pi-cog" v-on:click="editPlayer" v-if="!canJoin"></Button>
             </div>
         </template>
@@ -32,7 +32,7 @@
     <PlayerEditDialog ref="playerEditDialog"> </PlayerEditDialog>
 
     <Card v-if="showGameSetting" name="settings">
-        <template #title>Game Settings</template>
+        <template #title>{{ t('gameSettings') }}</template>
         <template #content>
             <component :is="settingsComponent" class="tab" :settings="game.settings" @changeSettings="changeSettings"
                 :canEdit="isGameOwner">
@@ -40,17 +40,17 @@
             </component>
         </template>
         <template #footer>
-            <Button @click="startGame">Start Game</Button>
+            <Button @click="startGame">{{ t('startGame') }}</Button>
         </template>
     </Card>
 
     <Card v-if="showGameView && game.status == GameStatusEnum.FINISHED" class="mb-2">
         <template #title>
-            Game Finished!
+            {{ t('gameFinished') }}
         </template>
         <template #content>
 
-            <p>Winners:</p>
+            <p>{{ t('winners') }}</p>
             <span v-for="player in winners">{{ player.name }}</span>
         </template>
     </Card>
@@ -83,7 +83,35 @@ import GameHost from '../services/gameHost';
 import getGameSerivce from '../services/gameService/gameServiceSelector';
 import type { GameService } from '../services/gameService/gameService';
 import type { GameAction } from '../services/messages';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n({
+    locale: 'en',
+    messages: {
+        en: {
+            playerPoints: 'Points: {points}',
+            connecting: 'Connecting...',
+            connected: 'Connected',
+            disconnected: 'Disconnected',
+            join: 'Join',
+            gameSettings: 'Game Settings',
+            startGame: 'Start Game',
+            gameFinished: 'Game Finished',
+            winners: 'Winners:'
+        },
+        ru: {
+            playerPoints: 'Очки: {points}',
+            connecting: 'Подключение...',
+            connected: 'Подключено',
+            disconnected: 'Отключено',
+            join: 'Присоединиться',
+            gameSettings: 'Настройки Игры',
+            startGame: 'Начать игру',
+            gameFinished: 'Игра Закончена',
+            winners: 'Победители:'
+        }
+    }
+})
 
 const route = useRoute()
 const localStore = useLocalStore();
@@ -233,22 +261,22 @@ onMounted(async () => {
     gameClient.on('connectStatusChanged', (status) => {
         switch (status) {
             case ConnectStatus.CONNECTED:
-                connectStatusText.value = "Connected"
+                connectStatusText.value = t('connected')
                 connectStatusSeverity.value = 'success'
                 break
             case ConnectStatus.CONNECTING:
-                connectStatusText.value = "Connecting..."
+                connectStatusText.value = t('connecting')
                 connectStatusSeverity.value = 'warn'
                 break
             case ConnectStatus.DISCONNECTED:
-                connectStatusText.value = "Disconnected"
+                connectStatusText.value = t('disconnected')
                 connectStatusSeverity.value = 'danger'
                 break
         }
     })
 
     gameClient.on("ErorrGameMessage", (message) => {
-        emitter.emit('toastMessage', { severity: 'error', summary: message.message, life: 3000 })
+        emitter.emit('toastMessage', { severity: 'error', summary: t(message.message, message.messageParams), life: 3000 })
     })
 
     gameClient.on("JoinGameMessage", (message) => {

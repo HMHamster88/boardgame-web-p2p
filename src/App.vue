@@ -14,12 +14,18 @@ import emitter from './utils/eventBus'
 import { type ToastMessageOptions } from 'primevue/toast';
 import { useLocalStore } from './services/localStore'
 import { v4 as uuidv4 } from 'uuid'
+import { useI18n } from 'vue-i18n'
+
+const i18n = useI18n()
+
 const toast = useToast();
 
 const localStore = useLocalStore();
 if (!localStore.user.id) {
   localStore.user.id = uuidv4()
 }
+
+i18n.locale.value = localStore.settings.locale
 
 emitter.on('toastMessage', (message: ToastMessageOptions) => {
   toast.add(message)

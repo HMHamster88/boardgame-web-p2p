@@ -4,8 +4,8 @@
             {{ confirm.message }}
         </div>
         <div class="flex justify-end gap-2">
-            <Button type="button" label="Cancel" severity="secondary" @click="close(false)"></Button>
-            <Button type="button" label="OK" @click="close(true)"></Button>
+            <Button type="button" :label="$t('cancel')" severity="secondary" @click="close(false)"></Button>
+            <Button type="button" :label="$t('ok')" @click="close(true)"></Button>
         </div>
     </Dialog>
 </template>

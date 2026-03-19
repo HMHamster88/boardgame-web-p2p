@@ -12,7 +12,8 @@ export interface GameInfoMessage {
 
 export interface ErorrGameMessage extends GameMessage {
     type: 'ErorrGameMessage',
-    message: string
+    message: string,
+    messageParams?: any
 }
 
 export interface StartGameMessage extends GameMessage {

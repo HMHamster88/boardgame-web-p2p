@@ -1,7 +1,7 @@
 <template>
     <Menubar>
         <template #start>
-            <Button label="Boardgames" class="mr-2" as="router-link" variant="link" to="/" />
+            <Button :label="t('games')" class="mr-2" as="router-link" variant="link" to="/" />
         </template>
 
 
@@ -24,6 +24,19 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import { computed, ref } from "vue";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n({
+    locale: 'en',
+    messages: {
+        en: {
+            games: 'Games'
+        },
+        ru: {
+            games: 'Игры'
+        }
+    }
+})
 
 const popover = ref();
 

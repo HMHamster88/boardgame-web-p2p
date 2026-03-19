@@ -1,6 +1,6 @@
 <template>
     <div class="flex-auto">
-        <label for="fieldSize" class="font-bold block mb-2">Field size</label>
+        <label for="fieldSize" class="font-bold block mb-2">{{ $t('fieldSize') }}</label>
         <InputNumber v-model="settings.fieldSize" inputId="fieldSize" fluid :min="3" :max="10" />
     </div>
 </template>

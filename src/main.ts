@@ -11,8 +11,10 @@ import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import Tooltip from 'primevue/tooltip';
 import VueQrcode from '@chenfengyuan/vue-qrcode';
+import { createI18n } from 'vue-i18n'
 
 import router from './router/router'
+import { localizationMessages } from './localizationMessages';
 
 const app = createApp(App)
 
@@ -27,6 +29,13 @@ app.use(PrimeVue, {
     }
 });
 
+const i18n = createI18n({
+    legacy: false,
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: localizationMessages
+})
+
 app.component('vue-qrcode', VueQrcode);
 app.directive('tooltip', Tooltip)
 app.use(router)
@@ -36,5 +45,6 @@ app.use(DialogService)
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
+app.use(i18n)
 
 app.mount('#app')

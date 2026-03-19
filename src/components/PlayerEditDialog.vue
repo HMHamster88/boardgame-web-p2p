@@ -1,22 +1,40 @@
 <template>
-    <Dialog v-model:visible="showDialog" modal header="Edit Player" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="showDialog" modal :header="t('editPlayer')" :style="{ width: '25rem' }">
         <div class="flex items-center gap-4 mb-4">
-            <label for="name" class="font-semibold w-24">Name</label>
+            <label for="name" class="font-semibold w-24">{{ t('playerName') }}</label>
             <InputText id="name" class="flex-auto" autocomplete="off" v-model="dialogPlayer.name" />
         </div>
         <div class="flex items-center gap-4 mb-8">
-            <label for="cp-hex" class="font-semibold w-24">Color</label>
+            <label for="cp-hex" class="font-semibold w-24">{{ t('playerColor') }}</label>
             <ColorPicker v-model="dialogPlayer.color" inputId="cp-hex" format="hex" class="mb-4" />
         </div>
         <div class="flex justify-end gap-2">
-            <Button type="button" label="Cancel" severity="secondary" @click="close(false)"></Button>
-            <Button type="button" label="Save" @click="close(true)"></Button>
+            <Button type="button" :label="t('cancel')" severity="secondary" @click="close(false)"></Button>
+            <Button type="button" :label="t('save')" @click="close(true)"></Button>
         </div>
     </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n({
+    locale: 'en',
+    messages: {
+        en: {
+            editPlayer: 'Edit player',
+            playerName: 'Name',
+            playerColor: 'Color'
+
+        },
+        ru: {
+            editPlayer: 'Edit player',
+            playerName: 'Name',
+            playerColor: 'Color'
+        }
+    }
+})
 
 const showDialog = ref(false)
 const dialogPlayer = ref<PlayerProps>({

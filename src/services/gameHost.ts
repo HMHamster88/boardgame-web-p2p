@@ -50,10 +50,12 @@ export default class GameHost {
             }
         }
 
+        const settings = this.game.settings
+
         const messageHandlers = {
             onJoinGameMessage: (peerId: string, message: JoinGameMessage) => {
                 if (this.game.players.length >= this.game.settings.maxPlayers) {
-                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'Maximum players in game' })
+                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'maxPlayerCount', messageParams: { playersCount: settings.maxPlayers } })
                 }
                 this.game.players.push(message.player)
                 db.updateGame(this.game)
@@ -61,12 +63,17 @@ export default class GameHost {
             },
             onStartGameMessage: (peerId: string, _message: StartGameMessage) => {
                 const playersCount = this.game.players.length
-                if (playersCount < this.game.settings.minPlayers || playersCount > this.game.settings.maxPlayers) {
-                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'Invalid players count' })
+
+                if (playersCount < settings.minPlayers) {
+                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'minimalPlayerCount', messageParams: { playersCount: settings.minPlayers } })
+                    return
+                }
+                if (playersCount > settings.maxPlayers) {
+                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'maxPlayerCount', messageParams: { playersCount: settings.maxPlayers } })
                     return
                 }
                 if (peerId != this.game.owner) {
-                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'You are not owner of this game' })
+                    this.send<ErorrGameMessage>(peerId, { type: 'ErorrGameMessage', message: 'notGameOwner' })
                     return
                 }
                 this.gameState = this.gameService.startGame(this.game)

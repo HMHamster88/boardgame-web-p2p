@@ -7,8 +7,13 @@ export interface User {
     color: string
 }
 
+export interface Settings {
+    locale: string
+}
+
 interface LocalStore {
-    user: User
+    user: User,
+    settings: Settings
 }
 
 export const useLocalStore = defineStore(
@@ -19,6 +24,9 @@ export const useLocalStore = defineStore(
                 id: '',
                 name: 'User',
                 color: '#FF0000'
+            },
+            settings: {
+                locale: 'en'
             }
         }),
         persist: true
