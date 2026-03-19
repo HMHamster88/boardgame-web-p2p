@@ -1,19 +1,25 @@
 <template>
     <Card>
         <template #content>
-            <div :style="{ width: '25rem' }">
+            <div>
                 <div class="flex items-center gap-4 mb-4">
-                    <label for="language" class="font-semibold w-48">{{ t('settings.language') }}</label>
+                    <label for="language" class="font-semibold w-48">{{ t('language') }}</label>
                     <Select id="language" v-model="language" :options="languages" optionLabel="name"
                         class="flex-auto" />
                 </div>
                 <div class="flex items-center gap-4 mb-4">
-                    <label for="name" class="font-semibold w-48">{{ t('settings.defaultPlayerName') }}</label>
-                    <InputText id="name" autocomplete="off" v-model="localStore.user.name" />
+                    <label for="name" class="font-semibold w-48">{{ t('defaultPlayerName') }}</label>
+                    <InputText id="name" autocomplete="off" v-model="localStore.user.name" class="flex-auto" />
                 </div>
                 <div class="flex items-center gap-4 mb-4">
-                    <label for="cp-hex" class="font-semibold w-48">{{ t('settings.defaultPlayerColor') }}</label>
+                    <label for="cp-hex" class="font-semibold w-48">{{ t('defaultPlayerColor') }}</label>
                     <ColorPicker inputId="cp-hex" format="hex" v-model="userColor" />
+                </div>
+
+                <div class="flex items-center gap-4 mb-4">
+                    <label for="soundVolume" class="font-semibold w-48">{{ t('soundVolume') }}</label>
+                    <Slider :min="0" :max="1" :step="0.01" inputId="soundVolume"
+                        v-model="localStore.settings.soundsVolume" class="flex-auto" />
                 </div>
             </div>
         </template>
@@ -29,18 +35,18 @@ const i18n = useI18n({
     locale: 'en',
     messages: {
         en: {
-            settings: {
-                defaultPlayerName: 'Default Player Name',
-                defaultPlayerColor: 'Default Player Color',
-                language: 'Language'
-            }
+
+            defaultPlayerName: 'Default Player Name',
+            defaultPlayerColor: 'Default Player Color',
+            language: 'Language',
+            soundVolume: 'Sound Volume'
         },
         ru: {
-            settings: {
-                defaultPlayerName: 'Имя игрока по умолчанию',
-                defaultPlayerColor: 'Цвет игрока по умолчанию',
-                language: 'Язык'
-            }
+
+            defaultPlayerName: 'Имя игрока по умолчанию',
+            defaultPlayerColor: 'Цвет игрока по умолчанию',
+            language: 'Язык',
+            soundVolume: 'Громкость звуков'
         }
     }
 })

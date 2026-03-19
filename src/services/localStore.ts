@@ -8,7 +8,8 @@ export interface User {
 }
 
 export interface Settings {
-    locale: string
+    locale: string,
+    soundsVolume: number
 }
 
 interface LocalStore {
@@ -26,7 +27,8 @@ export const useLocalStore = defineStore(
                 color: '#FF0000'
             },
             settings: {
-                locale: 'en'
+                locale: 'en',
+                soundsVolume: 0.5
             }
         }),
         persist: true

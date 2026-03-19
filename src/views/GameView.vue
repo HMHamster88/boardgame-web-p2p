@@ -84,6 +84,7 @@ import getGameSerivce from '../services/gameService/gameServiceSelector';
 import type { GameService } from '../services/gameService/gameService';
 import type { GameAction } from '../services/messages';
 import { useI18n } from 'vue-i18n';
+import { soundService } from '../services/soundService';
 
 const { t } = useI18n({
     locale: 'en',
@@ -97,7 +98,8 @@ const { t } = useI18n({
             gameSettings: 'Game Settings',
             startGame: 'Start Game',
             gameFinished: 'Game Finished',
-            winners: 'Winners:'
+            winners: 'Winners:',
+            yourTurn: 'Your turn'
         },
         ru: {
             playerPoints: 'Очки: {points}',
@@ -108,7 +110,8 @@ const { t } = useI18n({
             gameSettings: 'Настройки Игры',
             startGame: 'Начать игру',
             gameFinished: 'Игра Закончена',
-            winners: 'Победители:'
+            winners: 'Победители:',
+            yourTurn: 'Ваш ход'
         }
     }
 })
@@ -143,6 +146,13 @@ const connectStatusText = ref('Connecting...')
 const connectStatusSeverity = ref('warn')
 
 let gameService: GameService
+
+watch(gameState, (newValue) => {
+    if (newValue.activePlayerIndex == localPlayerIndex.value && game.value.status == GameStatusEnum.STARTED) {
+        emitter.emit('toastMessage', { severity: 'info', summary: t('yourTurn'), life: 1000 })
+        soundService.notification()
+    }
+})
 
 function playerClassStyle(player: Player) {
     return {
