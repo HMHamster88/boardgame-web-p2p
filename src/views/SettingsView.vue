@@ -9,7 +9,7 @@
                 </div>
                 <div class="flex items-center gap-4 mb-4">
                     <label for="cp-hex" class="font-semibold w-48">Default Player Color</label>
-                    <ColorPicker inputId="cp-hex" format="hex" v-model="localStore.user.color" />
+                    <ColorPicker inputId="cp-hex" format="hex" v-model="userColor" />
                 </div>
             </div>
         </template>
@@ -17,8 +17,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useLocalStore } from '../services/localStore'
 
 const localStore = useLocalStore();
+
+const userColor = computed({
+    get: () => {
+        return localStore.user.color
+    },
+    set: (newValue) => {
+        if (newValue.startsWith('#')) {
+            localStore.user.color = newValue
+        } else {
+            localStore.user.color = '#' + newValue
+        }
+    }
+})
 
 </script>

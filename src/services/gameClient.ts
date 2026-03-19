@@ -94,7 +94,7 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
     }
 
     send<T extends GameMessage>(message: T) {
-        this.connection.send(this.gameId, JSON.stringify(message))
+        this.connection.send(getGamePeerId(this.gameId), JSON.stringify(message))
     }
 
     join(name: string, color: string) {
