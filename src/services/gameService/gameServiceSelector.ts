@@ -1,14 +1,45 @@
-import { GameType } from "../../db/game"
 import type { GameService } from "./gameService"
-import { TicTacToeGameService } from "../../games/ticTacToe/ticTacToeGameService"
-import { CahService } from "../../games/cah/cahService"
 
-const gameServices = new Map<GameType, GameService>([
-    [GameType.TIC_TAC_TOE, new TicTacToeGameService()],
-    [GameType.CARDS_AGAINST_HUMANITY, new CahService()]
-])
+interface GameModule {
+    getService: () => GameService;
+}
 
-function getGameSerivce(gameType: GameType): GameService {
+async function loadModules() {
+    const modules = import.meta.glob<GameModule>('../../games/**/*Service.ts', {
+        eager: false
+    });
+
+    const loadedModules = await Promise.all(
+        Object.entries(modules).map(async ([_path, importModule]) => {
+            const module = await importModule();
+            return module;
+        })
+    );
+
+    return loadedModules;
+}
+
+const gameModiles = await loadModules();
+
+const gameServices = new Map<string, GameService>(gameModiles.map((module) => {
+    const gameService = module.getService()
+    return [gameService.gameType, gameService]
+}))
+
+export interface TypedName {
+    type: string,
+    name: string
+}
+
+export const typedGameNames = Array.from(gameServices.values())
+    .map(gameSerivce => {
+        return {
+            type: gameSerivce.gameType,
+            name: gameSerivce.gameName
+        }
+    })
+
+function getGameSerivce(gameType: string): GameService {
     return gameServices.get(gameType)!
 }
 

@@ -10,6 +10,8 @@ export interface GameService {
     performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string): void
     readonly settingsComponent: Component
     readonly gameViewComponent: Component
+    readonly gameType: string
+    readonly gameName: string
 }
 
 

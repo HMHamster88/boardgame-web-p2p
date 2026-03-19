@@ -18,32 +18,18 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { GameType, type CrateGameProps } from '../db/game';
+import { type CrateGameProps } from '../db/game';
 import { useLocalStore } from '../services/localStore'
+import { typedGameNames, type TypedName } from '../services/gameService/gameServiceSelector';
 
 const localStore = useLocalStore();
-
-interface GameStringType {
-    name: String,
-    value: GameType
-}
 
 const showDialog = ref(false)
 
 const name = ref('New Game')
-const gameTypes = ref<GameStringType[]>([
-    {
-        name: 'Tick Tack Toe',
-        value: GameType.TIC_TAC_TOE
-    },
-    {
-        name: 'Cards Against Humanity',
-        value: GameType.CARDS_AGAINST_HUMANITY
-    }
-])
+const gameTypes = ref<TypedName[]>(typedGameNames)
 
-const type = ref<GameStringType>(gameTypes.value[0]!)
-
+const type = ref<TypedName>(gameTypes.value[0]!)
 
 var openPromise: Promise<CrateGameProps>
 
@@ -63,7 +49,7 @@ function close(save: boolean) {
     if (save) {
         openPromiseResolve({
             name: name.value,
-            type: type.value.value,
+            type: type.value.type,
             owner: localStore.user.id
         })
     } else {

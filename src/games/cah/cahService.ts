@@ -14,9 +14,13 @@ import { random } from "lodash";
 import { getShuffledArray } from "../../utils/arrayUtils";
 import _ from "lodash";
 
+export function getService(): GameService {
+    return new CahService()
+}
 
 export class CahService implements GameService {
-
+    readonly gameName: string = 'Cards Against Humanity'
+    readonly gameType: string = 'CARDS_AGAINST_HUMANITY'
     settingsComponent: Component = CahSettings
     gameViewComponent: Component = CahGameView
 

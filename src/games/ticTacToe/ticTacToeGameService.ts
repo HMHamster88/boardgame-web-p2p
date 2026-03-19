@@ -10,7 +10,13 @@ import { TicTacToeGameStateFieldEnum, type TicTacToeGameSettings, type TicTacToe
 import type { GameState } from "../../db/gameState";
 import { inti2DArray } from "../../utils/arrayUtils";
 
+export function getService(): GameService {
+    return new TicTacToeGameService()
+}
+
 export class TicTacToeGameService implements GameService {
+    readonly gameName: string = 'Tic Tac Toe'
+    readonly gameType: string = 'TIC_TAC_TOE'
     readonly gameViewComponent: Component = TickTacToeGameView
     readonly settingsComponent: Component = TickTacToeSettings
 

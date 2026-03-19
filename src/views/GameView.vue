@@ -75,7 +75,7 @@ import emitter from '../utils/eventBus'
 import { useLocalStore } from '../services/localStore'
 import type Game from '../db/game';
 
-import { GameStatusEnum, GameType } from '../db/game';
+import { GameStatusEnum } from '../db/game';
 import type { PlayerPrivateState, GamePublicState } from '../db/gameState';
 import type { Player } from '../db/player';
 import GameClient, { ConnectStatus } from '../services/gameClient';
@@ -91,7 +91,7 @@ const localStore = useLocalStore();
 const gameId = route.params['id'] as string
 const gameHost = new GameHost(gameId)
 const gameClient = new GameClient(gameId, localStore.user.id)
-const game = ref<Game>({ id: '', name: '', owner: '', players: [], status: GameStatusEnum.CREATED, type: GameType.TIC_TAC_TOE, settings: { minPlayers: 2, maxPlayers: 2 }, created: new Date() } as Game)
+const game = ref<Game>({ id: '', name: '', owner: '', players: [], status: GameStatusEnum.CREATED, type: '', settings: { minPlayers: 2, maxPlayers: 2 }, created: new Date() } as Game)
 const gameState = ref<GamePublicState>({
     activePlayerIndex: 0,
     playersStates: null,
