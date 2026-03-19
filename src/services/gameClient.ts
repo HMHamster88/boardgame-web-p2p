@@ -4,7 +4,8 @@ import {
     type JoinGameMessage,
     type ErorrGameMessage,
     type GameAction,
-    type GameActionMessage
+    type GameActionMessage,
+    getGamePeerId
 } from "./messages";
 
 import EventEmitter from "eventemitter3"
@@ -41,19 +42,18 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
     connectStatus: ConnectStatus = ConnectStatus.CONNECTING
 
     async start() {
-        console.log(`User ID: ${this.userId}`)
         await this.connection.start()
-        this.connection?.connectTo(this.gameId)
+        this.connection?.connectTo(getGamePeerId(this.gameId))
     }
 
     constructor(gameId: string, userId: string) {
         super();
         this.gameId = gameId
         this.userId = userId
-        this.connection = new P2PConnection(this.userId, 'gameboard', p2pDefaultConfig)
-        this.gameObjectSync = new ObjectSync<Game>(this.connection, 'game', false, null, null)
-        this.gamePublicStateSync = new ObjectSync<GamePublicState>(this.connection, 'gamePublicState', false, null, null)
-        this.playerPrivateStateSync = new ObjectSync<PlayerPrivateState>(this.connection, 'playerPrivateState:' + userId, false, null, null)
+        this.connection = new P2PConnection(this.userId, p2pDefaultConfig)
+        this.gameObjectSync = new ObjectSync<Game>({ connection: this.connection, id: 'game' })
+        this.gamePublicStateSync = new ObjectSync<GamePublicState>({ connection: this.connection, id: 'gamePublicState' })
+        this.playerPrivateStateSync = new ObjectSync<PlayerPrivateState>({ connection: this.connection, id: 'playerPrivateState:' + userId })
 
         this.connection.on('dataMessage', (_peerId, message) => {
             const gameMessage = JSON.parse(message) as GameMessage
@@ -62,7 +62,7 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
         })
 
         this.connection.on('peerConnected', (peerId) => {
-            if (peerId == this.gameId) {
+            if (peerId == getGamePeerId(this.gameId)) {
                 this.connectStatus = ConnectStatus.CONNECTED
                 this.emit('connectStatusChanged', this.connectStatus)
             }

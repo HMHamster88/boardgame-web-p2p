@@ -1,5 +1,6 @@
 import EventEmitter from 'eventemitter3';
-import { type IceCandidateMessage, type AnswerMessage, type OfferMessage, type OnlineMesage, type SignalMessage, type SignalErrorMessage, SignalErrorType } from '../../server/src/messages'
+import { type IceCandidateMessage, type AnswerMessage, type OfferMessage, type OnlineMesage, type SignalMessage, type SignalErrorMessage, SignalErrorType, type PeersListMessage } from '../../server/src/messages'
+import { removeElement } from '../utils/arrayUtils';
 
 export interface P2PConfig {
     channel: string
@@ -96,27 +97,28 @@ export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 interface P2PConnectionEvents {
     signalServerConnected: () => void
     peerConnected: (peerId: string) => void
+    peerConnectedToChannel: (peerId: string) => void
     peerDisconnected: (peerId: string) => void
     dataMessage: (peerId: string, message: any) => void
     signalError: (errorType: SignalErrorType, message: string) => void
+    peerListReceived: (peerIds: string[]) => void
 }
 
 export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
     readonly peerId: string
-    readonly channelId: string
     readonly config: P2PConfig
     webSocket!: WebSocket
     readonly peers = new Map<string, PeerConnection>()
+    channelPeerIds: string[] = []
 
-    constructor(peerId: string, channelId: string, config: P2PConfig) {
+    constructor(peerId: string, config: P2PConfig) {
         super()
         this.peerId = peerId
-        this.channelId = channelId
         this.config = config
     }
 
     async start() {
-        this.webSocket = new WebSocket(this.config.signaWslUrl + `/${this.channelId}/${this.peerId}`)
+        this.webSocket = new WebSocket(this.config.signaWslUrl + `/${this.config.channel}/${this.peerId}`)
 
         const promise = new Promise<void>((resolve, reject) => {
             this.webSocket.onopen = (_ev) => {
@@ -173,6 +175,10 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
                             this.emit('peerDisconnected', peer.remotePeerId)
                             this.peers.delete(peer.remotePeerId)
                         }
+                        removeElement(this.channelPeerIds, message.peerId)
+                    } else {
+                        this.channelPeerIds.push(message.peerId)
+                        this.emit('peerConnectedToChannel', message.peerId)
                     }
                 },
                 iceCandidate: async (message: IceCandidateMessage) => {
@@ -186,6 +192,10 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
                 error: async (message: SignalErrorMessage) => {
                     console.log(`Signal error ${message.errorType} "${message.message}"`)
                     this.emit('signalError', message.errorType, message.message)
+                },
+                peersList: async (message: PeersListMessage) => {
+                    this.channelPeerIds = message.peers
+                    this.emit('peerListReceived', message.peers)
                 }
             }
 
@@ -222,6 +232,10 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
     }
 
     async connectTo(remotePeerId: string) {
+        if (this.peers.has(remotePeerId)) {
+            console.log(`Already connected to peer "${remotePeerId}"`)
+            return
+        }
         const newPeerConnection = this.createPeerConnection(remotePeerId)
 
         newPeerConnection.connection.addEventListener('icecandidate', (e) => {
@@ -261,9 +275,10 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
         peer.send(data)
     }
 
-    sendToAll(data: any) {
+    sendToAll(data: any, filter: ((peerId: string) => boolean) | undefined = undefined) {
         this.peers.forEach((peer) => {
-            if (peer.isConnected()) {
+            console.log(`Peer ${this.peerId} filter ${(!filter || filter(peer.remotePeerId))}`)
+            if (peer.isConnected() && (!filter || filter(peer.remotePeerId))) {
                 peer.send(data)
             }
         })

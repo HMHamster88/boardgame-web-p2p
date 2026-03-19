@@ -6,7 +6,7 @@ import { ObjectSync } from "../p2p/objectSync";
 import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import type { GameService } from "./gameService/gameService";
 import getGameSerivce from "./gameService/gameServiceSelector";
-import type { ErorrGameMessage, GameActionMessage, GameMessage, JoinGameMessage, StartGameMessage } from "./messages";
+import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type StartGameMessage } from "./messages";
 
 export default class GameHost {
     gameId: string
@@ -29,10 +29,16 @@ export default class GameHost {
         }
         this.game = dbGame
         this.gameService = getGameSerivce(this.game.type)
-        this.connection = new P2PConnection(this.gameId, 'gameboard', p2pDefaultConfig)
+        this.connection = new P2PConnection(getGamePeerId(this.gameId), p2pDefaultConfig)
         await this.connection.start()
 
-        this.gameSync = new ObjectSync(this.connection, 'game', true, this.game, null)
+        this.gameSync = new ObjectSync({
+            connection: this.connection,
+            id: 'game',
+            value: this.game,
+            retranslateChanges: true,
+            peerFiler: isNotGameObserverId
+        })
         if (this.game.status != GameStatusEnum.CREATED) {
             const dbGameState = await db.getGameState(this.gameId)
             if (dbGameState) {
@@ -120,10 +126,16 @@ export default class GameHost {
             if (playerSync) {
                 playerSync?.sendUpdate(null, peerId)
             }
+
+            if (isGameObserverId(peerId)) {
+                this.send<GameInfoMessage>(peerId, {
+                    type: 'GameInfoMessage',
+                    game: this.game
+                })
+            }
         })
 
         this.connection.on('peerDisconnected', (peerId) => {
-            console.log("Host peer disconnected ", peerId)
             const player = this.getPlayerById(peerId)
             if (player) {
                 player.online = false
@@ -141,13 +153,24 @@ export default class GameHost {
         if (!playerState) {
             return null
         }
-        const playerStateSync = new ObjectSync<PlayerPrivateState>(this.connection, 'playerPrivateState:' + userId, false, playerState)
+        const playerStateSync = new ObjectSync<PlayerPrivateState>({
+            connection: this.connection,
+            id: 'playerPrivateState:' + userId,
+            value: playerState,
+            peerFiler: isNotGameObserverId
+        })
         this.playerPrivateStateSync.set(userId, playerStateSync)
         return playerStateSync
     }
 
     createPublicStateSync() {
-        this.gamePublicStateSync = new ObjectSync(this.connection, 'gamePublicState', true, this.gameState.publicState, null)
+        this.gamePublicStateSync = new ObjectSync({
+            connection: this.connection,
+            id: 'gamePublicState',
+            retranslateChanges: true,
+            value: this.gameState.publicState,
+            peerFiler: isNotGameObserverId
+        })
     }
 
     getPlayerById(userId: string) {
@@ -159,7 +182,9 @@ export default class GameHost {
     }
 
     sendToAll<T extends GameMessage>(message: T) {
-        this.connection.sendToAll(JSON.stringify(message))
+        this.connection.sendToAll(JSON.stringify(message), (peerConnetion) => {
+            return !isGameObserverId(peerConnetion)
+        })
     }
 
     close() {

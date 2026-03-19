@@ -27,22 +27,50 @@
             </div>
         </template>
     </Card>
+
+    <Card class="card">
+        <template #title>Hosted Games</template>
+        <template #content>
+            <DataView :value="gameObserver.games.value">
+                <template #list="slotProps">
+                    <div class="flex flex-col">
+                        <div v-for="(game, index) in slotProps.items" :key="index">
+                            <div class="flex justify-between mb-2">
+                                <label class="flex mr-auto text-gray-900">
+                                    <span class="text-lg font-medium">{{ game.name }}</span>
+                                </label>
+                                <div style=""></div>
+                                <Button class="mr-1" as="router-link" :to="'/games/' + game.id">
+                                    View
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </DataView>
+        </template>
+    </Card>
     <CreateGameDialog ref="createGameDialog"></CreateGameDialog>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import type Game from '../db/game';
 import getGameSerivce from '../services/gameService/gameServiceSelector';
 
 import emitter from '../utils/eventBus'
 import CreateGameDialog from '../components/CreateGameDialog.vue';
 import db from '../db/db';
+import GameObserver from '../services/gameObserver';
+import { useLocalStore } from '../services/localStore';
 
+const localStore = useLocalStore();
+
+const gameObserver = new GameObserver(localStore.user.id)
 
 const createGameDialog = useTemplateRef('createGameDialog')
 
-var games = ref<Game[]>([]);
+const games = ref<Game[]>([]);
 
 async function loadGames() {
     games.value = (await db.getAllGames());
@@ -75,6 +103,11 @@ function deleteGame(game: Game) {
 }
 
 onMounted(async () => {
+    gameObserver.connection.start()
     loadGames();
+})
+
+onUnmounted(() => {
+    gameObserver.connection.close()
 })
 </script>
