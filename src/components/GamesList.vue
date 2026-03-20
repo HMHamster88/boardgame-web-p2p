@@ -9,14 +9,15 @@
                 <template #list="slotProps">
                     <div class="flex flex-col">
                         <div v-for="(game, index) in slotProps.items" :key="index">
-                            <div class="flex justify-between mb-2">
+                            <div class="flex justify-between mb-2 gap-2">
                                 <label class="flex mr-auto text-gray-900">
                                     <span class="text-lg font-medium">{{ game.name }}</span>
                                 </label>
                                 <div style=""></div>
-                                <Button class="mr-1" as="router-link" :to="'/games/' + game.id">
+                                <Button as="router-link" :to="'/games/' + game.id">
                                     {{ t('go') }}
                                 </Button>
+                                <Button type="button" icon="pi pi-download" @click="saveGameToFile(game)" />
                                 <Button icon="pi pi-times" severity="secondary" @click="deleteGame(game)">
 
                                 </Button>
@@ -25,8 +26,9 @@
                     </div>
                 </template>
             </DataView>
-            <div class="flex items-center">
+            <div class="flex items-center gap-2">
                 <Button @click="createGame">{{ t('create') }}</Button>
+                <Button type="button" icon="pi pi-folder-open" @click="loadGameFromFile" />
             </div>
         </template>
     </Card>
@@ -70,6 +72,8 @@ import db from '../db/db';
 import GameObserver from '../services/gameObserver';
 import { useLocalStore } from '../services/localStore';
 import { useI18n } from 'vue-i18n';
+import { loadGame, saveGame, type GameFile } from '../utils/fileUtils';
+import { v4 as uuidv4 } from 'uuid'
 
 const { t } = useI18n({
     locale: 'en',
@@ -131,6 +135,25 @@ function deleteGame(game: Game) {
             loadGames()
         }
     })
+}
+
+async function loadGameFromFile() {
+    const gameFile = await loadGame()
+    gameFile.game.owner = localStore.user.id
+    const newId = uuidv4()
+    gameFile.game.id = newId
+    gameFile.gameState.id = newId
+    db.updateGame(gameFile.game)
+    db.updateGameState(gameFile.gameState)
+    loadGames()
+}
+
+async function saveGameToFile(game: Game) {
+    const gameFile: GameFile = {
+        game: game,
+        gameState: (await db.getGameState(game.id))!
+    }
+    saveGame(gameFile)
 }
 
 onMounted(async () => {
