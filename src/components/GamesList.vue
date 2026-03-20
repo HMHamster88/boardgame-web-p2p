@@ -15,7 +15,7 @@
                                 </label>
                                 <div style=""></div>
                                 <div>{{ $d(game.created, 'long') }}</div>
-                                <Button as="c" :to="'/games/' + game.id">
+                                <Button as="router-link" :to="'/games/' + game.id">
                                     {{ t('go') }}
                                 </Button>
                                 <Button type="button" icon="pi pi-download" @click="saveGameToFile(game)" />
