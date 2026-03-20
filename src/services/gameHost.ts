@@ -4,9 +4,10 @@ import { GameStatusEnum } from "../db/game";
 import type { GamePublicState, GameState, PlayerPrivateState } from "../db/gameState";
 import { ObjectSync } from "../p2p/objectSync";
 import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
+import { removeElement } from "../utils/arrayUtils";
 import type { GameService } from "./gameService/gameService";
 import getGameSerivce from "./gameService/gameServiceSelector";
-import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type StartGameMessage } from "./messages";
+import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type KickPlayerMessage, type StartGameMessage } from "./messages";
 
 export default class GameHost {
     gameId: string
@@ -98,6 +99,20 @@ export default class GameHost {
                     this.gameSync.sendUpdate('status')
                     db.updateGame(this.game)
                 }
+            },
+            onKickPlayerMessage: (peerId: string, message: KickPlayerMessage) => {
+                const player = this.game.players.find(pl => pl.userId == message.playerId)
+                if (!player) {
+                    console.log(`No player with id "${message.playerId}"`)
+                    return
+                }
+                if (this.game.owner != peerId && player.userId == peerId) {
+                    console.log(`Kick player "${message.playerId}" not allowed`)
+                    return
+                }
+                removeElement(this.game.players, player)
+                db.updateGame(this.game)
+                this.gameSync.sendUpdate('players')
             }
         }
 

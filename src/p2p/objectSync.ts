@@ -39,7 +39,7 @@ export class ObjectSync<T extends object> {
                 if (!message.path && this.valueSetter) {
                     this.value = this.valueSetter(message.value)
                 } else if (this.value && message.path) {
-                    if (_.isObject(message.value)) {
+                    if (_.isObject(message.value) && !_.isArray(message.value)) {
                         const oldVal = _.get(this.value, message.path)
                         Object.assign(oldVal, message.value)
                     } else {

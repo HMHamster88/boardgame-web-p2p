@@ -40,7 +40,7 @@
             </component>
         </template>
         <template #footer>
-            <Button @click="startGame">{{ t('startGame') }}</Button>
+            <Button @click="startGame" v-if="isGameOwner">{{ t('startGame') }}</Button>
         </template>
     </Card>
 
@@ -227,7 +227,7 @@ function startGame() {
 }
 
 function canKickPlayer(player: Player): boolean {
-    return player.userId == localStore.user.id
+    return (player.userId == localStore.user.id || game.value.owner == localStore.user.id) && game.value.status == GameStatusEnum.CREATED
 }
 
 function kickPlayer(player: Player) {
@@ -238,6 +238,7 @@ function kickPlayer(player: Player) {
             if (!result) {
                 return
             }
+            gameClient.kickPlayer(player.userId)
         }
     })
 }

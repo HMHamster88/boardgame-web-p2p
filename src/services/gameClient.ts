@@ -5,7 +5,8 @@ import {
     type ErorrGameMessage,
     type GameAction,
     type GameActionMessage,
-    getGamePeerId
+    getGamePeerId,
+    type KickPlayerMessage
 } from "./messages";
 
 import EventEmitter from "eventemitter3"
@@ -107,6 +108,13 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
         this.send<JoinGameMessage>({
             type: 'JoinGameMessage',
             player: player
+        })
+    }
+
+    kickPlayer(playerId: string) {
+        this.send<KickPlayerMessage>({
+            type: 'KickPlayerMessage',
+            playerId: playerId
         })
     }
 

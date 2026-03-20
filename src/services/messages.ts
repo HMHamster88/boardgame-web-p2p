@@ -25,6 +25,11 @@ export interface JoinGameMessage extends GameMessage {
     player: Player
 }
 
+export interface KickPlayerMessage extends GameMessage {
+    type: 'KickPlayerMessage'
+    playerId: string
+}
+
 export interface GameAction {
     type: string
 }
