@@ -9,12 +9,13 @@
                 <template #list="slotProps">
                     <div class="flex flex-col">
                         <div v-for="(game, index) in slotProps.items" :key="index">
-                            <div class="flex justify-between mb-2 gap-2">
+                            <div class="flex justify-between mb-2 gap-2 items-center">
                                 <label class="flex mr-auto text-gray-900">
                                     <span class="text-lg font-medium">{{ game.name }}</span>
                                 </label>
                                 <div style=""></div>
-                                <Button as="router-link" :to="'/games/' + game.id">
+                                <div>{{ $d(game.created, 'long') }}</div>
+                                <Button as="c" :to="'/games/' + game.id">
                                     {{ t('go') }}
                                 </Button>
                                 <Button type="button" icon="pi pi-download" @click="saveGameToFile(game)" />

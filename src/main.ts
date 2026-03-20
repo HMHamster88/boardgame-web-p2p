@@ -33,7 +33,21 @@ const i18n = createI18n({
     legacy: false,
     locale: 'en',
     fallbackLocale: 'en',
-    messages: localizationMessages
+    messages: localizationMessages,
+    datetimeFormats: {
+        'en': {
+            long: {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: 'numeric', hour12: false
+            }
+        },
+        'ru': {
+            long: {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: 'numeric', hour12: false,
+            }
+        }
+    }
 })
 
 app.component('vue-qrcode', VueQrcode);
