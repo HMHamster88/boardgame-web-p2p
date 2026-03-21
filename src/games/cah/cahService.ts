@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type Game from "../../db/game";
 import type { GameState } from "../../db/gameState";
-import type { GameService } from "../../services/gameService/gameService";
+import type { GameObjectSyncs, GameService } from "../../services/gameService/gameService";
 import type { GameAction } from "../../services/messages";
 import CahSettings from "./components/CahSettings.vue";
 import CahGameView from "./components/CahGameView.vue";
@@ -86,7 +86,7 @@ export class CahService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string): void {
+    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): void {
         const publicState = gameState.publicState as CahGamePublicState
         const privateState = gameState.privateState as CahGamePrivateState
         const activePlayerId = game.players[gameState.publicState.activePlayerIndex]?.userId
@@ -117,6 +117,8 @@ export class CahService implements GameService {
                     publicState.playersSlectedAswers = getShuffledArray(publicState.playersSlectedAswers)
                     publicState.phase = CahGamePhase.ACTIVE_PLAYER_CHOOSE_ANSWERS
                 }
+                syncs.gamePublicStateSync?.sendUpdate()
+                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('onHandAswersIds')
             },
             onCahSelectAnswerAction: (action: CahSelectAnswerAction) => {
                 if (publicState.phase != CahGamePhase.ACTIVE_PLAYER_CHOOSE_ANSWERS) {
@@ -133,6 +135,7 @@ export class CahService implements GameService {
                 if (player.points! >= settings.pointsToWin) {
                     publicState.winnersIds = [player.playerId]
                     game.status = GameStatusEnum.FINISHED
+                    syncs.gameSync?.sendUpdate()
                 }
 
                 publicState.playersSlectedAswers.forEach(pa => {
@@ -155,6 +158,9 @@ export class CahService implements GameService {
                 publicState.playersSlectedAswers = []
                 publicState.phase = CahGamePhase.PLAYERS_CHOOSE_ANSWERS
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
+
+                syncs.gamePublicStateSync?.sendUpdate()
+                syncs.playerPrivateStateSync.forEach((playerSync, peerId) => playerSync.sendUpdate(null, peerId))
             }
         }
 

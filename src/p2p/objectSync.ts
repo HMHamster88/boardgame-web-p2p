@@ -1,11 +1,15 @@
 import _ from 'lodash';
-import type { P2PConnection } from './p2p';
+import type { P2PConnection, PeerFilter } from './p2p';
+
+interface ObjectSyncPart {
+    path: string | undefined,
+    value: any
+}
 
 interface ObjectSyncMessage {
     type: 'ObjectSyncMessage'
     objectId: string,
-    value: any,
-    path: string | null
+    parts: ObjectSyncPart[]
 }
 
 interface ObjectSyncConfig<T> {
@@ -24,6 +28,8 @@ export class ObjectSync<T extends object> {
     retranslateChanges?: boolean
     connection: P2PConnection
     peerFiler?: (peerId: string) => boolean
+    updateSended: boolean = false
+    updateReceived: boolean = true // flag to prevent cycle updates from watch handler
 
     constructor(config: ObjectSyncConfig<T>) {
         this.id = config.id
@@ -36,39 +42,79 @@ export class ObjectSync<T extends object> {
         this.connection.addListener('dataMessage', (_peerId, stringMessage) => {
             const message = JSON.parse(stringMessage) as ObjectSyncMessage
             if (message && message.type == "ObjectSyncMessage" && message.objectId == this.id) {
-                if (!message.path && this.valueSetter) {
-                    this.value = this.valueSetter(message.value)
-                } else if (this.value && message.path) {
-                    if (_.isObject(message.value) && !_.isArray(message.value)) {
-                        const oldVal = _.get(this.value, message.path)
-                        Object.assign(oldVal, message.value)
-                    } else {
-                        _.set(this.value, message.path, message.value)
+                this.updateReceived = true
+                for (let part of message.parts) {
+                    if (!part.path && this.valueSetter) {
+                        this.value = this.valueSetter(part.value)
+                    } else if (this.value && part.path) {
+                        if (_.isObject(part.value) && !_.isArray(part.value)) {
+                            const oldVal = _.get(this.value, part.path)
+                            Object.assign(oldVal, part.value)
+                        } else {
+                            _.set(this.value, part.path, part.value)
+                        }
                     }
+
                 }
                 if (this.retranslateChanges) {
-                    this.sendUpdate(message.path)
+                    this.sendMessage(message, (peerId) => {
+                        return peerId != _peerId
+                    })
                 }
             }
         })
     }
 
-    sendUpdate(path: string | null = null, peerId: string | null = null) {
-        console.log('Send update', this.connection.peerId, this.value)
-        const updateValue = path ? _.get(this.value, path) : this.value
+    sendUpdate(paths: string[] | string | null = null, peerFilter: string | PeerFilter | null = null) {
+        let parts: ObjectSyncPart[] = []
+
+        if (!paths) {
+            parts = [
+                {
+                    path: undefined,
+                    value: this.value
+                }
+            ]
+        } else if (typeof paths === 'string') {
+            parts = [
+                {
+                    path: paths,
+                    value: _.get(this.value, paths)
+                }
+            ]
+        } else {
+            parts = paths.map(path => {
+                const part: ObjectSyncPart = {
+                    path: path,
+                    value: _.get(this.value, path)
+                }
+                return part
+            })
+        }
+
         const updateMessage: ObjectSyncMessage = {
             type: 'ObjectSyncMessage',
             objectId: this.id,
-            value: updateValue,
-            path: path
+            parts: parts
         }
+        this.sendMessage(updateMessage, peerFilter)
+    }
+
+    sendMessage(updateMessage: ObjectSyncMessage, peerId: string | PeerFilter | null = null) {
         const stringMessage = JSON.stringify(updateMessage)
-        if (peerId) {
+        if (typeof peerId === 'string') {
             if (!this.peerFiler || this.peerFiler(peerId)) {
                 this.connection.send(peerId, stringMessage)
+                this.updateSended = true
             }
-        } else {
+        } else if (!peerId) {
             this.connection.sendToAll(stringMessage, this.peerFiler)
+            this.updateSended = true
+        } else {
+            this.connection.sendToAll(stringMessage, peer => {
+                return peerId(peer) && (!this.peerFiler || this.peerFiler(peer))
+            })
+            this.updateSended = true
         }
     }
 }

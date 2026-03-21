@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type Game from "../../db/game";
-import type { GameService } from "../../services/gameService/gameService";
+import type { GameObjectSyncs, GameService } from "../../services/gameService/gameService";
 import TickTacToeSettings from "./components/TickTacToeSettings.vue"
 import TickTacToeGameView from "./components/TickTacToeGameView.vue"
 import { TicTacToeGameStateFieldEnum, type TicTacToeGameSettings, type TicTacToeGamePublicState, type TicTacToeSetCellAction } from "./types";
@@ -58,7 +58,7 @@ export class TicTacToeGameService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string): void {
+    performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string, syncs: GameObjectSyncs): void {
         if (game.status != GameStatusEnum.STARTED) {
             return
         }
@@ -66,12 +66,13 @@ export class TicTacToeGameService implements GameService {
         state.field[gameAction.y]![gameAction.x] = state.activePlayerIndex == 0 ? TicTacToeGameStateFieldEnum.CROSS : TicTacToeGameStateFieldEnum.ZERO
         gameState.publicState.activePlayerIndex++
         gameState.publicState.activePlayerIndex = gameState.publicState.activePlayerIndex % game.players.length
-
         const gameResult = this.checkgameFinished(gameState)
         if (gameResult != TicTacToeGameStateFieldEnum.NONE) {
             gameState.publicState.winnersIds = gameResult == TicTacToeGameStateFieldEnum.CROSS ? [game.players[0]?.userId!] : [game.players[1]?.userId!]
             game.status = GameStatusEnum.FINISHED
+            syncs.gameSync?.sendUpdate('status')
         }
+        syncs.gamePublicStateSync?.sendUpdate()
     }
 
     checkgameFinished(gameState: GameState): TicTacToeGameStateFieldEnum {

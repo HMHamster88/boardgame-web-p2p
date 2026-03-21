@@ -91,14 +91,34 @@ export default class GameHost {
                 })
             },
             onGameActionMessage: (peerId: string, message: GameActionMessage) => {
-                this.gameService.performAction(this.game, this.gameState, message.action, peerId)
-                db.updateGameState(this.gameState)
-                this.gamePublicStateSync.sendUpdate()
+                this.gameSync.updateSended = false
+                if (this.gamePublicStateSync) {
+                    this.gamePublicStateSync.updateSended = false
+                }
+                this.playerPrivateStateSync.forEach(sync => sync.updateSended = false)
+                this.gameService.performAction(this.game, this.gameState, message.action, peerId,
+                    {
+                        gameSync: this.gameSync,
+                        gamePublicStateSync: this.gamePublicStateSync,
+                        playerPrivateStateSync: this.playerPrivateStateSync
+                    })
+
+                if (this.gameSync.updateSended) {
+                    db.updateGame(this.game)
+                }
+                if (this.gameState) {
+                    const playersUpdated = !Array.from(this.playerPrivateStateSync.values()).find(sync => sync.updateSended)
+                    if (playersUpdated || (this.gamePublicStateSync && this.gamePublicStateSync.updateSended)) {
+                        db.updateGameState(this.gameState)
+                    }
+                }
+
+                /*this.gamePublicStateSync.sendUpdate()
                 this.playerPrivateStateSync.get(peerId)?.sendUpdate(null, peerId)
                 if (this.game.status == GameStatusEnum.FINISHED) {
                     this.gameSync.sendUpdate('status')
                     db.updateGame(this.game)
-                }
+                }*/
             },
             onKickPlayerMessage: (peerId: string, message: KickPlayerMessage) => {
                 const player = this.game.players.find(pl => pl.userId == message.playerId)
@@ -122,7 +142,6 @@ export default class GameHost {
 
             const handler = (messageHandlers as any)['on' + gameMessage.type]
             if (!handler) {
-                console.log(`Invalid message type "${gameMessage.type}"`)
                 return
             }
             handler(peerId, gameMessage)

@@ -17,10 +17,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { type CrateGameProps } from '../db/game';
 import { useLocalStore } from '../services/localStore'
-import { typedGameNames, type TypedName } from '../services/gameService/gameServiceSelector';
+import getGameSerivce, { typedGameNames, type TypedName } from '../services/gameService/gameServiceSelector';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n({
@@ -46,12 +46,18 @@ const localStore = useLocalStore();
 
 const showDialog = ref(false)
 
-const name = ref(t('newGame'))
+
 const gameTypes = ref<TypedName[]>(typedGameNames)
 
 const type = ref<TypedName>(gameTypes.value[0]!)
 
+const name = ref(getGameSerivce(type.value.type).gameName)
+
 var openPromise: Promise<CrateGameProps>
+
+watch(type, newType => {
+    name.value = getGameSerivce(newType.type).gameName
+})
 
 var openPromiseResolve: (value: CrateGameProps | PromiseLike<CrateGameProps>) => void
 var openPromiseReject: (reason?: any) => void

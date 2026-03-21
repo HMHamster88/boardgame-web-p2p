@@ -34,9 +34,8 @@
     <Card v-if="showGameSetting" name="settings">
         <template #title>{{ t('gameSettings') }}</template>
         <template #content>
-            <component :is="settingsComponent" class="tab" :settings="game.settings" @changeSettings="changeSettings"
+            <component :is="settingsComponent" class="tab" :settings="game.settings" @performAction="peformGameAction"
                 :canEdit="isGameOwner">
-
             </component>
         </template>
         <template #footer>
@@ -57,9 +56,9 @@
 
     <Card v-if="showGameView">
         <template #content>
-            <component :is="gameViewComponent" class="tab" :game="game" :gameState="gameState"
-                :playerPrivateState="playerPrivateState" :localPlayerIndex="localPlayerIndex" :players="game.players"
-                ref="gameView" @performAction="peformGameAction">
+            <component :is="gameViewComponent" :game="game" :gameState="gameState"
+                :playerPrivateState="playerPrivateState" :localPlayerIndex="localPlayerIndex" ref="gameView"
+                @performAction="peformGameAction">
 
             </component>
         </template>
@@ -212,14 +211,8 @@ function playerColorStyle(player: Player) {
     }
 }
 
-
 function peformGameAction(message: GameAction) {
     gameClient.performGameAction(message)
-}
-
-function changeSettings() {
-    console.log('Settings cahnge')
-    gameClient.gameObjectSync.sendUpdate('settings')
 }
 
 function startGame() {
@@ -299,7 +292,10 @@ onMounted(async () => {
         game.value = value
         gameService = getGameSerivce(game.value.type)
         watch(game.value.settings, () => {
-            gameClient.gameObjectSync.sendUpdate('settings')
+            if (!gameClient.gameObjectSync.updateReceived) {
+                gameClient.gameObjectSync.sendUpdate('settings')
+            }
+            gameClient.gameObjectSync.updateReceived = false
         })
         return game.value
     }

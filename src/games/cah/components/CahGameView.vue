@@ -6,7 +6,8 @@
                     v-on:click="selectQACard(qaCard)" v-html="qaCard.text">
                 </li>
             </ul>
-            <Button v-if="isLocalPlayerTurn" v-on:click="submitQA" :disabled="submitQaDisabled">$t('submit')</Button>
+            <Button v-if="isLocalPlayerTurn" v-on:click="submitQA"
+                :disabled="submitQaDisabled">{{ $t('submit') }}</Button>
         </div>
         <div class="flex items-center" style="flex-direction: column"
             v-if="gameState.phase == CahGamePhase.PLAYERS_CHOOSE_ANSWERS">

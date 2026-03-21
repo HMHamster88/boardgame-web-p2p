@@ -29,6 +29,8 @@ interface PeerConnectionEvents {
     dataMessage: (message: any) => void
 }
 
+export type PeerFilter = (peerId: string) => boolean
+
 export class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     remotePeerId: string
     connection: RTCPeerConnection
@@ -275,9 +277,8 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
         peer.send(data)
     }
 
-    sendToAll(data: any, filter: ((peerId: string) => boolean) | undefined = undefined) {
+    sendToAll(data: any, filter: PeerFilter | undefined = undefined) {
         this.peers.forEach((peer) => {
-            console.log(`Peer ${this.peerId} filter ${(!filter || filter(peer.remotePeerId))}`)
             if (peer.isConnected() && (!filter || filter(peer.remotePeerId))) {
                 peer.send(data)
             }
