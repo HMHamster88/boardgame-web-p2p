@@ -44,7 +44,7 @@
 
 import Dice from '../../../components/Dice.vue';
 
-import { computed, type PropType, ref, useTemplateRef, watch } from 'vue';
+import { computed, type PropType, ref, useTemplateRef } from 'vue';
 import CatanHexGrid from './CatanHexGrid.vue';
 import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
 import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
@@ -339,10 +339,6 @@ const emit = defineEmits<{
 
 const isLocalPlayerTurn = computed(() => {
     return props.localPlayerIndex == props.gameState.activePlayerIndex
-})
-
-const activePlayer = computed(() => {
-    return props.game.players[props.gameState.activePlayerIndex]!
 })
 
 const props = defineProps({

@@ -25,7 +25,6 @@ declare module 'vue' {
     Header: typeof import('./src/components/Header.vue')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
-    Menu: typeof import('primevue/menu')['default']
     Menubar: typeof import('primevue/menubar')['default']
     PlayerEditDialog: typeof import('./src/components/PlayerEditDialog.vue')['default']
     Popover: typeof import('primevue/popover')['default']

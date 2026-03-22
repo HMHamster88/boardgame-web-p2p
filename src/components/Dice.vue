@@ -82,7 +82,7 @@ const props = defineProps({
     }
 })
 
-let intervalId = -1
+let intervalId: any
 
 function starRollingAnimation() {
     if (!diceElement.value) {
@@ -112,24 +112,24 @@ watch(() => props.result, (newVal) => {
     }
 })
 
+// @ts-ignore
 const smallDotSize = computed(() => {
     return props.dotSize * 0.85
 })
 
+// @ts-ignore
 const bigDotSize = computed(() => {
     return props.dotSize * 1.2
 })
 
+// @ts-ignore
 const halfSize = computed(() => {
     return props.size / 2
 })
 
+// @ts-ignore
 function px(num: number) {
     return num + 'px'
-}
-
-function deg(num: number) {
-    return num + 'deg'
 }
 
 </script>
