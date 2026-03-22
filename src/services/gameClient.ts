@@ -16,7 +16,6 @@ import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import { ObjectSync } from "../p2p/objectSync";
 import type Game from "../db/game";
 import type { GamePublicState, PlayerPrivateState } from "../db/gameState";
-import { SignalErrorType } from "../../server/src/messages";
 
 export enum ConnectStatus {
     CONNECTING,
@@ -73,23 +72,6 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
             if (peerId == this.gameId) {
                 this.connectStatus = ConnectStatus.DISCONNECTED
                 this.emit('connectStatusChanged', this.connectStatus)
-            }
-        })
-
-        this.connection.on('signalError', (errorType, _message) => {
-            switch (errorType) {
-                case SignalErrorType.PEER_ALREADY_CONNECTED:
-                    this.emit('ErorrGameMessage', {
-                        type: 'ErorrGameMessage',
-                        message: 'User already conneted to this game'
-                    })
-                    break;
-                case SignalErrorType.NO_PEER:
-                    this.emit('ErorrGameMessage', {
-                        type: 'ErorrGameMessage',
-                        message: `Game "${this.gameId} not hosted"`
-                    })
-                    break;
             }
         })
     }

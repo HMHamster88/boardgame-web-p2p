@@ -1,5 +1,6 @@
 import EventEmitter from 'eventemitter3';
-import { type IceCandidateMessage, type AnswerMessage, type OfferMessage, type OnlineMesage, type SignalMessage, type SignalErrorMessage, SignalErrorType, type PeersListMessage } from '../../server/src/messages'
+import mqtt from 'mqtt';
+import { channelId } from '../services/messages';
 import { removeElement } from '../utils/arrayUtils';
 
 export interface P2PConfig {
@@ -9,11 +10,12 @@ export interface P2PConfig {
 }
 
 const stunServerUrl = import.meta.env.VITE_STUN_SERVER_URL || `stun:${location.hostname}:3478`
-const signalServerUrl = import.meta.env.VITE_SIGNAL_WS_URL || `ws://${location.hostname}:8000/ws`
+const signalServerUrl = import.meta.env.VITE_SIGNAL_WS_URL || `ws://${location.hostname}:8888`
 
 const rtcDefaultConfig = {
     iceServers: [
-        { "urls": stunServerUrl }
+        { "urls": [stunServerUrl] },
+        { "urls": 'stun:stun1.l.google.com:19302' }
     ]
 };
 
@@ -102,14 +104,13 @@ interface P2PConnectionEvents {
     peerConnectedToChannel: (peerId: string) => void
     peerDisconnected: (peerId: string) => void
     dataMessage: (peerId: string, message: any) => void
-    signalError: (errorType: SignalErrorType, message: string) => void
     peerListReceived: (peerIds: string[]) => void
 }
 
 export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
     readonly peerId: string
     readonly config: P2PConfig
-    webSocket!: WebSocket
+    mqttClient!: mqtt.MqttClient
     readonly peers = new Map<string, PeerConnection>()
     channelPeerIds: string[] = []
 
@@ -120,93 +121,97 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
     }
 
     async start() {
-        this.webSocket = new WebSocket(this.config.signaWslUrl + `/${this.config.channel}/${this.peerId}`)
+        const selfTopic = `${this.config.channel}/${this.peerId}`
 
-        const promise = new Promise<void>((resolve, reject) => {
-            this.webSocket.onopen = (_ev) => {
-                resolve()
-                this.emit('signalServerConnected')
-            }
-            this.webSocket.onclose = (_ev) => {
-                reject()
-            }
-
-            this.webSocket.onerror = (ev) => {
-                reject()
-                console.log('Web scoket error', ev)
+        this.mqttClient = mqtt.connect(this.config.signaWslUrl, {
+            will: {
+                topic: selfTopic,
+                payload: 'offline',
+                qos: 1,
+                retain: true
             }
         })
 
-        this.webSocket.onmessage = async (ev) => {
-            const message = JSON.parse(ev.data) as SignalMessage
-            const handlers = {
-                offer: async (message: OfferMessage) => {
-                    const peerConnection = this.createPeerConnection(message.peerId)
-                    this.peers.set(message.peerId, peerConnection)
-                    const remoteOffer = new RTCSessionDescription(message.offer);
-                    await peerConnection.setRemoteDescription(remoteOffer)
+        const promise = new Promise<void>((resolve, reject) => {
+            this.mqttClient.on('connect', () => {
+                console.debug('MQTT conneted')
 
-                    const remotePeerId = peerConnection.remotePeerId
+                this.mqttClient.publish(selfTopic, 'online', { qos: 1, retain: true, })
+                this.mqttClient.subscribe(selfTopic + '/#')
+                this.mqttClient.subscribe(`${this.config.channel}/+`)
+                resolve()
+            })
 
-                    peerConnection.connection.addEventListener('icecandidate', (e) => {
-                        var cand = e.candidate;
-                        if (!cand) {
-                            const message: AnswerMessage = {
-                                type: 'answer',
-                                peerId: remotePeerId,
-                                answer: peerConnection.connection.localDescription
-                            }
-                            this.sendSignalMessage(message)
+            this.mqttClient.on('error', (error) => {
+                console.debug('Mqtt error', error.message)
+                reject()
+            })
 
+            this.mqttClient.on('message', async (topic, message) => {
+                const topicParts = topic.split('/')
+                const peerId = topicParts[1]!
+                const remotePeerId = topicParts[2]!
+                const method = topicParts[3]!
+
+                if (!remotePeerId) {
+                    const stringMessage = message.toString()
+                    if (stringMessage == 'online') {
+                        if (!this.channelPeerIds.includes(peerId)) {
+                            this.channelPeerIds.push(peerId)
+                            this.emit('peerConnectedToChannel', peerId)
                         }
-                    })
-                },
-                answer: async (message: AnswerMessage) => {
-                    const peerConnection = this.peers.get(message.peerId)
-                    if (!peerConnection) {
-                        console.log(`No peer with id "${message.peerId}"`)
-                        return
+                    } else if (stringMessage == 'offline') {
+                        removeElement(this.channelPeerIds, peerId)
+                        this.emit('peerDisconnected', peerId)
                     }
-                    const remoteOffer = new RTCSessionDescription(message.answer);
-                    await peerConnection.setRemoteDescription(remoteOffer)
-                },
-                online: async (message: OnlineMesage) => {
-                    if (!message.online) {
-                        const peer = this.peers.get(message.peerId)
-                        if (peer) {
-                            this.emit('peerDisconnected', peer.remotePeerId)
-                            this.peers.delete(peer.remotePeerId)
-                        }
-                        removeElement(this.channelPeerIds, message.peerId)
-                    } else {
-                        this.channelPeerIds.push(message.peerId)
-                        this.emit('peerConnectedToChannel', message.peerId)
-                    }
-                },
-                iceCandidate: async (message: IceCandidateMessage) => {
-                    const peerConnection = this.peers.get(message.peerId)
-                    if (!peerConnection) {
-                        console.log(`No peer with id "${message.peerId}"`)
-                        return
-                    }
-                    peerConnection.connection.addIceCandidate(message.candidate)
-                },
-                error: async (message: SignalErrorMessage) => {
-                    console.log(`Signal error ${message.errorType} "${message.message}"`)
-                    this.emit('signalError', message.errorType, message.message)
-                },
-                peersList: async (message: PeersListMessage) => {
-                    this.channelPeerIds = message.peers
-                    this.emit('peerListReceived', message.peers)
                 }
-            }
 
-            const handler = (handlers as any)[message.type]
+                const handlers = {
+                    offer: async () => {
+                        if (peerId == this.peerId) {
+                            const peerConnection = this.createPeerConnection(remotePeerId)
+                            this.peers.set(remotePeerId, peerConnection)
+                            const offer = JSON.parse(message.toString())
+                            const remoteOffer = new RTCSessionDescription(offer);
+                            await peerConnection.setRemoteDescription(remoteOffer)
 
-            if (handler) {
-                await handler(message)
-            }
-        }
+                            peerConnection.connection.addEventListener('icecandidate', (e) => {
+                                var cand = e.candidate;
+                                if (!cand) {
+                                    this.mqttClient.publish(`${channelId}/${remotePeerId}/${this.peerId}/answer`,
+                                        JSON.stringify(peerConnection.connection.localDescription))
+                                }
+                            })
+                        }
+                    },
+                    answer: async () => {
+                        const peerConnection = this.peers.get(remotePeerId)
+                        if (!peerConnection) {
+                            console.log(`No peer with id "${remotePeerId}"`)
+                            return
+                        }
+                        const answer = JSON.parse(message.toString())
+                        const remoteOffer = new RTCSessionDescription(answer);
+                        await peerConnection.setRemoteDescription(remoteOffer)
+                    },
+                    iceCandidate: async () => {
+                        const peerConnection = this.peers.get(remotePeerId)
+                        if (!peerConnection) {
+                            console.log(`No peer with id "${remotePeerId}"`)
+                            return
+                        }
+                        const candidate = JSON.parse(message.toString())
+                        peerConnection.connection.addIceCandidate(candidate)
+                    }
+                }
+
+                const handler = (handlers as any)[method]
+                if (handler) {
+                    await handler()
+                }
+
+            })
+        })
         return promise
     }
 
@@ -225,14 +230,6 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
         return connection;
     }
 
-    isSignalServerConnected() {
-        return this.webSocket.readyState == WebSocket.OPEN
-    }
-
-    sendSignalMessage<T extends SignalMessage>(message: T) {
-        this.webSocket.send(JSON.stringify(message))
-    }
-
     async connectTo(remotePeerId: string) {
         if (this.peers.has(remotePeerId)) {
             console.log(`Already connected to peer "${remotePeerId}"`)
@@ -243,11 +240,7 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
         newPeerConnection.connection.addEventListener('icecandidate', (e) => {
             var cand = e.candidate;
             if (cand) {
-                this.sendSignalMessage<IceCandidateMessage>({
-                    type: 'iceCandidate',
-                    peerId: remotePeerId,
-                    candidate: cand
-                })
+                this.mqttClient.publish(`${this.config.channel}/${remotePeerId}/${this.peerId}/iceCandidate`, JSON.stringify(cand))
             }
 
         })
@@ -258,12 +251,7 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
 
         this.peers.set(remotePeerId, newPeerConnection)
         const offer = await newPeerConnection.createOffer()
-        const message: OfferMessage = {
-            type: 'offer',
-            peerId: remotePeerId,
-            offer: offer
-        }
-        this.sendSignalMessage(message)
+        this.mqttClient.publish(`${this.config.channel}/${remotePeerId}/${this.peerId}/offer`, JSON.stringify(offer))
     }
 
     send(remotePeerId: string, data: any) {
@@ -289,6 +277,8 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
         this.peers.forEach((peer) => {
             peer.close()
         })
-        this.webSocket.close()
+        const selfTopic = `${this.config.channel}/${this.peerId}`
+        this.mqttClient.publish(selfTopic, 'offline')
+        this.mqttClient.end()
     }
 }
