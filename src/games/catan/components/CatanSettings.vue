@@ -1,10 +1,10 @@
 <template>
     <div class="flex-auto">
-        <div class="flex-auto">
-            <Button v-on:click="generateGameField" class="mr-2">{{ t('generateField') }}</Button>
-            <label for="type" class="font-semibold w-24">{{ t('fieldType') }}</label>
+        <div class="flex gap-2 items-center">
+            <Button v-on:click="generateGameField">{{ t('generateField') }}</Button>
+            <label for="type" class="font-semibold">{{ t('fieldType') }}</label>
             <Select id="type" v-model="settings.fieldType" :options="fieldTypes"
-                :optionLabel="(type => t('fieldTypes.' + type))" class="flex-auto" />-
+                :optionLabel="(type => t('fieldTypes.' + type))" />
         </div>
         <CatanHexGrid :field="settings.field"></CatanHexGrid>
     </div>
@@ -14,7 +14,8 @@
 
 import { type PropType } from 'vue';
 import CatanHexGrid from './CatanHexGrid.vue';
-import { type CatanGameSettings, type CatanGenerateFieldAction } from '../types/types';
+import { type CatanGameSettings } from '../types/types';
+import { type CatanGenerateFieldAction } from "../types/actions";
 import { CatanGameFieldType } from "../types/catanGameFieldType";
 import { useI18n } from 'vue-i18n';
 import type { GameAction } from '../../../services/messages';

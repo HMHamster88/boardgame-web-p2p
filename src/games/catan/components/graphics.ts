@@ -37,6 +37,14 @@ export const resourceCardsImg: Record<CatanResourceType, string> = {
     [CatanResourceType.WOOL]: sheepCardImg
 }
 
+export const resourcesImages: Record<CatanResourceType, string> = {
+    [CatanHarbourType.CLAY]: bricsImg,
+    [CatanHarbourType.ORE]: oreImg,
+    [CatanHarbourType.WOOL]: sheepImg,
+    [CatanHarbourType.GRAIN]: wheatImg,
+    [CatanHarbourType.WOOD]: woodImg,
+}
+
 export const terrainImages = [
     {
         type: CatanTerrainHexType.DESERT,

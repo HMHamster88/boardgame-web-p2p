@@ -58,7 +58,7 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
 
         this.connection.on('dataMessage', (_peerId, message) => {
             const gameMessage = JSON.parse(message) as GameMessage
-            console.log(`Client message received`, gameMessage)
+            console.debug(`Client message received`, gameMessage)
             this.emit(gameMessage.type as keyof GameClientEvents, gameMessage as any)
         })
 

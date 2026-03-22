@@ -7,7 +7,8 @@ import type { GameObjectSyncs, GameService } from "../../services/gameService/ga
 import { handleMessage, type GameAction } from "../../services/messages";
 import CatanSettings from "./components/CatanSettings.vue";
 import CatanGameView from "./components/CatanGameView.vue";
-import { CatanDiceValue, CatanGamePhase, CatanIntersectionObjectType, type CatanEmbarkAction, type CatanField, type CatanGameSettings, type CatanHarbour, type CatanIntersection, type CatanPlayerPrivateState, type CatanPlayerPublicState, type CatanPrivateGameState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad, type CatanTerrainHex } from "./types/types";
+import { CatanDiceValue, CatanGamePhase, CatanIntersectionObjectType, type CatanField, type CatanGameSettings, type CatanHarbour, type CatanIntersection, type CatanPlayerPrivateState, type CatanPlayerPublicState, type CatanPrivateGameState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad, type CatanTerrainHex } from "./types/types";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanEmbarkAction, type CatanEndTurnAction } from "./types/actions";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { getShuffledArray, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
@@ -15,6 +16,7 @@ import { Vector2D } from '../commonTypes/vector2d';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import _ from 'lodash';
 import { distinct } from '../commonTypes/hex-grid/hexData';
+import { sleep } from '../../utils/functionUtils';
 
 export function getService(): GameService {
     return new CatanGameService()
@@ -140,10 +142,17 @@ export class CatanGameService implements GameService {
                 syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources', playerId)
                 syncs.gamePublicStateSync?.sendUpdate(['field.intersections', 'field.roads', 'activePlayerIndex', 'phase'])
             },
-            onCatanRollDicesAction: () => {
+            onCatanRollDicesAction: async () => {
                 const publicState = gameState.publicState as CatanPublicGameState
-                publicState.dices.redDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
-                publicState.dices.yellowDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
+                const dices = publicState.dices
+
+                dices.redDice = 0
+                dices.yellowDice = 0
+                syncs.gamePublicStateSync?.sendUpdate('dices')
+                await sleep(1000)
+
+                dices.redDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
+                dices.yellowDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
 
                 const allDiceValue = (publicState.dices.redDice as number) + (publicState.dices.yellowDice)
 
@@ -167,8 +176,43 @@ export class CatanGameService implements GameService {
 
                 playersUpdateId.forEach(playerId => syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources'))
 
+                //publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
+                publicState.phase = CatanGamePhase.PLAYER_TURN
+                syncs.gamePublicStateSync?.sendUpdate(['dices', 'phase'])
+            },
+            onCatanBuildRoadAction: (action: CatanBuildRoadAction) => {
+                const publicState = gameState.publicState as CatanPublicGameState
+                const field = publicState.field
+                let road = field.roads.find(road => Vector2D.equals(road.position, action.position))
+                if (road) {
+                    console.debug(`Road on position ${action.position} already exists`)
+                    return
+                }
+                // TODO CHECK CAN BUILD
+                road = {
+                    playerId: playerId,
+                    position: action.position
+                }
+                field.roads.push(road)
+                syncs.gamePublicStateSync?.sendUpdate('field.roads')
+            },
+            onCatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
+                const publicState = gameState.publicState as CatanPublicGameState
+                const field = publicState.field
+                let int = field.intersections.find(int => Vector2D.equals(int.position, action.position))
+                if (!int) {
+                    int = {
+                        position: action.position,
+                        intersectionObjects: []
+                    }
+                }
+                // TODO
+            },
+            onCatanEndTurnAction: (_action: CatanEndTurnAction) => {
+                const publicState = gameState.publicState as CatanPublicGameState
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
-                syncs.gamePublicStateSync?.sendUpdate('dices')
+                publicState.phase = CatanGamePhase.THROWING_DICE
+                syncs.gamePublicStateSync?.sendUpdate(['activePlayerIndex', 'phase'])
             }
         }, gameAction)
 
@@ -227,7 +271,7 @@ export class CatanGameService implements GameService {
             const shift = y < halfHeight ? y : halfHeight - 1
             for (let x = 0; x < rowWidth; x++) {
                 const hexType = terrainHexTypes.pop()!
-                const circularNumber = circularNumbers.pop()!
+                const circularNumber = hexType == CatanTerrainHexType.DESERT ? 0 : circularNumbers.pop()!
                 const postion = new Vector2D(x - shift, y).multiplied(6)
                 const terrainHex: CatanTerrainHex = {
                     position: postion,

@@ -1,0 +1,55 @@
+.resource-cards-container {
+    display: flex;
+    overflow: auto;
+    gap: 1rem;
+    padding-bottom: 1rem;
+}
+
+.resource-card {
+    background: rgb(255, 255, 255);
+    background-size: cover;
+    padding: 2rem;
+    border-radius: 8px;
+    height: 10rem;
+    aspect-ratio: 0.65
+}
+
+.dice-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+@keyframes pulse-highlight {
+    0% {
+        box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0);
+    }
+
+    50% {
+        box-shadow: inset 0px 0px 5px rgb(0, 250, 17);
+    }
+
+    100% {
+        box-shadow: inset 0px 0px 5px rgb(0, 0, 0, 0);
+    }
+}
+
+.dices-highlight {
+    animation: pulse-highlight 1s infinite ease-in-out;
+    cursor: pointer;
+}
+
+.hand-pointer {
+    cursor: pointer;
+}
+
+.selected-card {
+    border: 3px solid #28ee00;
+}
+
+.buy-item-dsabled {
+    opacity: 0.5;
+    cursor: default
+}

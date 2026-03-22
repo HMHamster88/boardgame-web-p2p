@@ -14,7 +14,7 @@
                                     v-tooltip="player.online ? 'Online' : 'Offline'"></div>
                                 <br>
                             </div>
-                            <div v-if="playersPoints[index] != null" style="text-align: center;">
+                            <div v-if="playersPoints && playersPoints[index] != null" style="text-align: center;">
                                 {{ t('playerPoints', { points: playersPoints[index] }) }}</div>
                         </div>
                         <template #removeicon="">
@@ -56,7 +56,7 @@
 
     <Card v-if="showGameView">
         <template #content>
-            <component :is="gameViewComponent" :game="game" :gameState="gameState"
+            <component v-if="gameState" :is="gameViewComponent" :game="game" :gameState="gameState"
                 :playerPrivateState="playerPrivateState" :localPlayerIndex="localPlayerIndex" ref="gameView"
                 @performAction="peformGameAction">
 
@@ -122,11 +122,7 @@ const gameId = route.params['id'] as string
 const gameHost = new GameHost(gameId)
 const gameClient = new GameClient(gameId, localStore.user.id)
 const game = ref<Game>({ id: '', name: '', owner: '', players: [], status: GameStatusEnum.CREATED, type: '', settings: { minPlayers: 2, maxPlayers: 2 }, created: new Date() } as Game)
-const gameState = ref<GamePublicState>({
-    activePlayerIndex: 0,
-    playersStates: null,
-    winnersIds: []
-})
+const gameState = ref<GamePublicState | undefined>(undefined)
 
 
 const playerPrivateState = ref<PlayerPrivateState>({
@@ -134,8 +130,11 @@ const playerPrivateState = ref<PlayerPrivateState>({
 })
 
 const playersPoints = computed(() => {
+    if (!gameState.value) {
+        return
+    }
     return game.value.players.map(player => {
-        return gameState.value.playersStates?.find(pl => pl.playerId == player.userId)?.points
+        return gameState.value?.playersStates?.find(pl => pl.playerId == player.userId)?.points
     })
 })
 
@@ -147,6 +146,9 @@ const connectStatusSeverity = ref('warn')
 let gameService: GameService
 
 watch(gameState, (newValue) => {
+    if (!newValue) {
+        return
+    }
     if (newValue.activePlayerIndex == localPlayerIndex.value && game.value.status == GameStatusEnum.STARTED) {
         emitter.emit('toastMessage', { severity: 'info', summary: t('yourTurn'), life: 1000 })
         soundService.notification()
@@ -172,7 +174,10 @@ const showGameView = computed(() => {
 })
 
 const winners = computed(() => {
-    return game.value.players.filter(player => gameState.value.winnersIds.includes(player.userId))
+    if (!gameState.value) {
+        return []
+    }
+    return game.value.players.filter(player => gameState.value?.winnersIds.includes(player.userId))
 })
 
 const settingsComponent = computed(() => {

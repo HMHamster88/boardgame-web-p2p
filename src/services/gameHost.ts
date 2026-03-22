@@ -112,22 +112,15 @@ export default class GameHost {
                         db.updateGameState(this.gameState)
                     }
                 }
-
-                /*this.gamePublicStateSync.sendUpdate()
-                this.playerPrivateStateSync.get(peerId)?.sendUpdate(null, peerId)
-                if (this.game.status == GameStatusEnum.FINISHED) {
-                    this.gameSync.sendUpdate('status')
-                    db.updateGame(this.game)
-                }*/
             },
             onKickPlayerMessage: (peerId: string, message: KickPlayerMessage) => {
                 const player = this.game.players.find(pl => pl.userId == message.playerId)
                 if (!player) {
-                    console.log(`No player with id "${message.playerId}"`)
+                    console.debug(`No player with id "${message.playerId}"`)
                     return
                 }
                 if (this.game.owner != peerId && player.userId == peerId) {
-                    console.log(`Kick player "${message.playerId}" not allowed`)
+                    console.debug(`Kick player "${message.playerId}" not allowed`)
                     return
                 }
                 removeElement(this.game.players, player)
@@ -138,7 +131,7 @@ export default class GameHost {
 
         this.connection.on('dataMessage', (peerId, message) => {
             const gameMessage = JSON.parse(message) as GameMessage
-            console.log('Host message received', gameMessage)
+            console.debug('Host message received', gameMessage)
 
             const handler = (messageHandlers as any)['on' + gameMessage.type]
             if (!handler) {
@@ -147,7 +140,7 @@ export default class GameHost {
             handler(peerId, gameMessage)
         })
         this.connection.on('peerConnected', (peerId) => {
-            console.log(`User "${peerId} connected"`)
+            console.debug(`User "${peerId} connected"`)
             const player = this.getPlayerById(peerId)
             if (player) {
                 player.online = true

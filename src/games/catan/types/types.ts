@@ -1,6 +1,5 @@
 import type { GameSettings } from "../../../db/game";
 import type { GamePrivateState, GamePublicState, PlayerPrivateState, PlayerPublicState } from "../../../db/gameState";
-import type { GameAction } from "../../../services/messages";
 import type { Vector2DLike } from "../../commonTypes/vector2d";
 import type { CatanGameFieldType } from "./catanGameFieldType";
 import type { CatanTerrainHexType } from "./catanTerrainHexType";
@@ -8,6 +7,7 @@ import type { CatanTerrainHexType } from "./catanTerrainHexType";
 export enum CatanGamePhase {
     EMBARK = "EMBARK",
     THROWING_DICE = "THROWING_DICE",
+    PLAYER_TURN = "PLAYER_TURN"
 }
 
 export enum CatanHarbourType {
@@ -77,6 +77,7 @@ export interface CatanPlayerPublicState extends PlayerPublicState {
 }
 
 export enum CatanDiceValue {
+    NONE = 0,
     ONE = 1,
     TWO = 2,
     THREE = 3,
@@ -110,16 +111,79 @@ export interface CatanPrivateGameState extends GamePrivateState {
     playersStates: CatanPlayerPrivateState[]
 }
 
-export interface CatanGenerateFieldAction extends GameAction {
-    type: 'CatanGenerateFieldAction'
+export enum CatanBuyItemType {
+    ROAD = 'ROAD',
+    SETTLEMENT = 'SETTLEMENT',
+    CITY = 'CITY',
+    DEVELOPMENT_CARD = 'DEVELOPMENT_CARD'
 }
 
-export interface CatanEmbarkAction extends GameAction {
-    type: 'CatanEmbarkAction',
-    settlements: Vector2DLike[],
-    roads: Vector2DLike[]
+export interface CatanBuyItem {
+    type: CatanBuyItemType
+    resources: CatanResourceCount[]
 }
 
-export interface CatanRollDicesAction extends GameAction {
-    type: 'CatanRollDicesAction'
+export function getBuyItems(): CatanBuyItem[] {
+    return [
+        {
+            type: CatanBuyItemType.ROAD,
+            resources: [
+                {
+                    type: CatanResourceType.WOOD,
+                    count: 2
+                }
+            ]
+        },
+        {
+            type: CatanBuyItemType.SETTLEMENT,
+            resources: [
+                {
+                    type: CatanResourceType.WOOD,
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.CLAY,
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.GRAIN,
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.WOOL,
+                    count: 1
+                }
+            ]
+        },
+        {
+            type: CatanBuyItemType.CITY,
+            resources: [
+                {
+                    type: CatanResourceType.GRAIN,
+                    count: 2
+                },
+                {
+                    type: CatanResourceType.ORE,
+                    count: 3
+                }
+            ]
+        },
+        {
+            type: CatanBuyItemType.DEVELOPMENT_CARD,
+            resources: [
+                {
+                    type: CatanResourceType.GRAIN,
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.WOOL,
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.ORE,
+                    count: 1
+                }
+            ]
+        }
+    ]
 }
