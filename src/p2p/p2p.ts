@@ -161,6 +161,11 @@ export class P2PConnection extends EventEmitter<P2PConnectionEvents> {
                             this.emit('peerConnectedToChannel', peerId)
                         }
                     } else if (stringMessage == 'offline') {
+                        const peer = this.peers.get(peerId)
+                        if (peer) {
+                            peer.close()
+                            this.peers.delete(peerId)
+                        }
                         removeElement(this.channelPeerIds, peerId)
                         this.emit('peerDisconnected', peerId)
                     }
