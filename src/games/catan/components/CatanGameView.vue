@@ -27,17 +27,9 @@
         <Button :disabled="!canEndTurn" v-on:click="endTurn()">{{ t('endTurn') }}</Button>
     </div>
 
-    <div class="flex justify-center mt-2">
-        <div class="resource-cards-container">
-            <div v-for="resource in playerPrivateState.resources"
-                style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <div class="resource-card" :style="resourceCardStyle(resource.type)">
-
-                </div>
-                <div>{{ resource.count }}</div>
-            </div>
-        </div>
-    </div>
+    <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources"
+        :resources="playerPrivateState.resources">
+    </CatanResourceCards>
 </template>
 
 <script setup lang="ts">
@@ -48,13 +40,28 @@ import { computed, type PropType, ref, useTemplateRef } from 'vue';
 import CatanHexGrid from './CatanHexGrid.vue';
 import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getVertexEdgesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
 import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
-import { buyItemToIntersectionObject, CatanBuyItemType, catanEmbarkPhases, CatanGamePhase, CatanIntersectionObjectType, CatanResourceType, getBuyItems, type CatanBuyItem, type CatanDices, type CatanIntersection, type CatanPlayerPrivateState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad } from '../types/types';
+import {
+    buyItemToIntersectionObject,
+    CatanBuyItemType,
+    catanEmbarkPhases,
+    CatanGamePhase,
+    CatanIntersectionObjectType,
+    getBuyItems,
+    type CatanBuyItem,
+    type CatanDices, type
+        CatanIntersection,
+    type CatanPlayerPrivateState,
+    type CatanPublicGameState,
+    type CatanResourceCount,
+    type CatanRoad
+} from '../types/types';
 import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
 import type { GameAction } from '../../../services/messages';
 import type Game from '../../../db/game';
 import { rangeArray, removeElement } from '../../../utils/arrayUtils';
-import { resourceCardsImg, resourcesImages } from './graphics';
+import { resourcesImages } from './graphics';
 import { useI18n } from 'vue-i18n';
+import CatanResourceCards from './CatanResourceCards.vue';
 
 const { t } = useI18n({
     locale: 'en',
@@ -169,10 +176,6 @@ function rollDices() {
     performAction<CatanRollDicesAction>({
         type: 'CatanRollDicesAction'
     })
-}
-
-function resourceCardStyle(resourceType: CatanResourceType) {
-    return `background-image: url("${resourceCardsImg[resourceType]}")`
 }
 
 const canEmbark = computed(() => {
