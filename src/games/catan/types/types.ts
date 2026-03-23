@@ -118,6 +118,14 @@ export enum CatanBuyItemType {
     DEVELOPMENT_CARD = 'DEVELOPMENT_CARD'
 }
 
+export function buyItemToIntersectionObject(item: CatanBuyItemType): CatanIntersectionObjectType | undefined {
+    return CatanBuyItemType[item] as any as CatanIntersectionObjectType
+}
+
+export function intersectionObjectRoBuyItem(item: CatanIntersectionObjectType): CatanBuyItemType | undefined {
+    return CatanIntersectionObjectType[item] as any as CatanBuyItemType
+}
+
 export interface CatanBuyItem {
     type: CatanBuyItemType
     resources: CatanResourceCount[]
@@ -130,7 +138,11 @@ export function getBuyItems(): CatanBuyItem[] {
             resources: [
                 {
                     type: CatanResourceType.WOOD,
-                    count: 2
+                    count: 1
+                },
+                {
+                    type: CatanResourceType.CLAY,
+                    count: 1
                 }
             ]
         },

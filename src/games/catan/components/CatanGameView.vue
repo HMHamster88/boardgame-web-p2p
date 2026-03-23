@@ -46,10 +46,10 @@ import Dice from '../../../components/Dice.vue';
 
 import { computed, type PropType, ref, useTemplateRef } from 'vue';
 import CatanHexGrid from './CatanHexGrid.vue';
-import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
+import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getVertexEdgesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
 import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
-import { CatanBuyItemType, CatanGamePhase, CatanIntersectionObjectType, CatanResourceType, getBuyItems, type CatanBuyItem, type CatanDices, type CatanIntersection, type CatanPlayerPrivateState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad } from '../types/types';
-import type { CatanBuildRoadAction, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
+import { buyItemToIntersectionObject, CatanBuyItemType, CatanGamePhase, CatanIntersectionObjectType, CatanResourceType, getBuyItems, type CatanBuyItem, type CatanDices, type CatanIntersection, type CatanPlayerPrivateState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad } from '../types/types';
+import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
 import type { GameAction } from '../../../services/messages';
 import type Game from '../../../db/game';
 import { rangeArray, removeElement } from '../../../utils/arrayUtils';
@@ -212,6 +212,9 @@ function roadOverlayClick(position: Vector2D) {
         if (props.gameState.phase == CatanGamePhase.EMBARK) {
             let road = roadsByCoords.value.get(position)
             if (road) {
+                if (road.playerId != localPlayer.value.userId) {
+                    return
+                }
                 removeElement(props.gameState.field.roads, road)
                 removeElement(embarkData.value.roads, road)
                 return
@@ -250,24 +253,24 @@ function roadOverlayClick(position: Vector2D) {
     }
 }
 
-function checkAndRemoveRoads(): boolean {
-    for (let road of embarkData.value.roads) {
+function checkAndRemoveRoads(playerId: string): boolean {
+    for (let road of embarkData.value.roads.filter(road => road.playerId == playerId)) {
         if (!canBuildRoad(road.position)) {
             removeElement(props.gameState.field.roads, road)
             removeElement(embarkData.value.roads, road)
-            checkAndRemoveRoads()
+            checkAndRemoveRoads(playerId)
             return false
         }
     }
 
-    const roadsWithSettelments = embarkData.value.roads.find(road => {
+    const roadsWithSettelments = embarkData.value.roads.filter(road => road.playerId == playerId).find(road => {
         const intersections = findByCoords(getEdgeVerticesPositions(road.position), intersectsByCoords.value)
             .filter(ins => hasSettlemetOrCity(ins, localPlayer.value.userId))
         return intersections.length
     })
 
     if (!roadsWithSettelments) {
-        props.gameState.field.roads = []
+        props.gameState.field.roads = props.gameState.field.roads.filter(road => road.playerId != playerId)
         embarkData.value.roads = []
         return false
     }
@@ -287,10 +290,12 @@ function intersectionOverlayClick(position: Vector2D) {
 
             var intersection: CatanIntersection | undefined = intersectsByCoords.value.get(position)
             if (intersection) {
+                if (intersection.intersectionObjects.some(io => io.playerId != localPlayer.value.userId)) {
+                    return
+                }
                 removeElement(props.gameState.field.intersections, intersection)
                 removeElement(embarkData.value.settlements, intersection)
-                checkAndRemoveRoads()
-
+                checkAndRemoveRoads(localPlayer.value.userId)
                 return
             }
 
@@ -309,8 +314,57 @@ function intersectionOverlayClick(position: Vector2D) {
 
             props.gameState.field.intersections.push(intersection)
             embarkData.value.settlements.push(intersection)
+        } else if (props.gameState.phase == CatanGamePhase.PLAYER_TURN) {
+            if (buildItemType.value) {
+                const intObjectType = buyItemToIntersectionObject(buildItemType.value)
+                if (!intObjectType) {
+                    return
+                }
+
+                if (!canBuildIntObject(intObjectType, position, localPlayer.value.userId)) {
+                    return
+                }
+
+                performAction<CatanBuildIntObjectAction>({
+                    type: 'CatanBuildIntObjectAction',
+                    position: position,
+                    objectType: intObjectType
+                })
+            }
         }
     }
+}
+
+function canBuildIntObject(intObjectType: CatanIntersectionObjectType, position: Vector2DLike, playerId: string): boolean {
+    const neighborhoodInts = findByCoords(getVertexNeighborhoodsPositions(position), intersectsByCoords.value)
+    const setType = [CatanIntersectionObjectType.CITY, CatanIntersectionObjectType.SETTLEMENT]
+    if (setType.includes(intObjectType)) {
+        // check have settelment on same hex edge
+        if (neighborhoodInts.some(nh => nh.intersectionObjects.some(io => setType.includes(io.type)))) {
+            return false
+        }
+        const int = intersectsByCoords.value.get(position)
+        if (int) {
+            // check settelment already 
+            const hasSettelment = int.intersectionObjects.some(io => io.type == CatanIntersectionObjectType.SETTLEMENT)
+            if (intObjectType == CatanIntersectionObjectType.SETTLEMENT && hasSettelment) {
+                return false
+            }
+            if (intObjectType == CatanIntersectionObjectType.CITY && !hasSettelment) {
+                return false
+            }
+        }
+
+        const roads = findByCoords(getVertexEdgesPositions(position), roadsByCoords.value)
+
+        if (intObjectType == CatanIntersectionObjectType.SETTLEMENT) {
+            if (!roads.some(road => road.playerId == playerId)) {
+                return false
+            }
+        }
+    }
+
+    return true
 }
 
 const showEmbarkButton = computed(() => {

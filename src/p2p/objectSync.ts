@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import type { P2PConnection, PeerFilter } from './p2p';
+import EventEmitter from 'eventemitter3';
 
 interface ObjectSyncPart {
     path: string | undefined,
@@ -21,7 +22,11 @@ interface ObjectSyncConfig<T> {
     peerFiler?: (peerId: string) => boolean
 }
 
-export class ObjectSync<T extends object> {
+interface ObjectSyncEvents {
+    syncronized: (message: ObjectSyncMessage) => void
+}
+
+export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents> {
     id: string
     value?: T
     valueSetter?: ((va: T) => T)
@@ -32,6 +37,7 @@ export class ObjectSync<T extends object> {
     updateReceived: boolean = true // flag to prevent cycle updates from watch handler
 
     constructor(config: ObjectSyncConfig<T>) {
+        super()
         this.id = config.id
         this.value = config.value
         this.valueSetter = config.valueSetter
@@ -56,6 +62,7 @@ export class ObjectSync<T extends object> {
                     }
 
                 }
+                this.emit('syncronized', message)
                 if (this.retranslateChanges) {
                     this.sendMessage(message, (peerId) => {
                         return peerId != _peerId

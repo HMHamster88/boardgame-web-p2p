@@ -7,7 +7,25 @@ import type { GameObjectSyncs, GameService } from "../../services/gameService/ga
 import { handleMessage, type GameAction } from "../../services/messages";
 import CatanSettings from "./components/CatanSettings.vue";
 import CatanGameView from "./components/CatanGameView.vue";
-import { CatanDiceValue, CatanGamePhase, CatanIntersectionObjectType, type CatanField, type CatanGameSettings, type CatanHarbour, type CatanIntersection, type CatanPlayerPrivateState, type CatanPlayerPublicState, type CatanPrivateGameState, type CatanPublicGameState, type CatanResourceCount, type CatanRoad, type CatanTerrainHex } from "./types/types";
+import {
+    CatanBuyItemType,
+    CatanDiceValue,
+    CatanGamePhase,
+    CatanIntersectionObjectType,
+    getBuyItems,
+    intersectionObjectRoBuyItem,
+    type CatanField,
+    type CatanGameSettings,
+    type CatanHarbour,
+    type CatanIntersection,
+    type CatanPlayerPrivateState,
+    type CatanPlayerPublicState,
+    type CatanPrivateGameState,
+    type CatanPublicGameState,
+    type CatanResourceCount,
+    type CatanRoad,
+    type CatanTerrainHex
+} from "./types/types";
 import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanEmbarkAction, type CatanEndTurnAction } from "./types/actions";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
@@ -176,13 +194,20 @@ export class CatanGameService implements GameService {
 
                 playersUpdateId.forEach(playerId => syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources'))
 
-                //publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
                 publicState.phase = CatanGamePhase.PLAYER_TURN
                 syncs.gamePublicStateSync?.sendUpdate(['dices', 'phase'])
             },
             onCatanBuildRoadAction: (action: CatanBuildRoadAction) => {
                 const publicState = gameState.publicState as CatanPublicGameState
+                const privateState = gameState.privateState as CatanPrivateGameState
+                const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
                 const field = publicState.field
+
+                const resources = getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
+                if (!this.checkPlayerHasResources(playerPrivateState, resources)) {
+                    return
+                }
+
                 let road = field.roads.find(road => Vector2D.equals(road.position, action.position))
                 if (road) {
                     console.debug(`Road on position ${action.position} already exists`)
@@ -194,19 +219,53 @@ export class CatanGameService implements GameService {
                     position: action.position
                 }
                 field.roads.push(road)
+                this.removeResources(playerPrivateState, resources)
+                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources')
                 syncs.gamePublicStateSync?.sendUpdate('field.roads')
             },
             onCatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
                 const publicState = gameState.publicState as CatanPublicGameState
+                const privateState = gameState.privateState as CatanPrivateGameState
+                const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
                 const field = publicState.field
+
+                const buyItemType = intersectionObjectRoBuyItem(action.objectType)!
+                const resources = getBuyItems().find(item => item.type == buyItemType)?.resources!
+                if (!this.checkPlayerHasResources(playerPrivateState, resources)) {
+                    return
+                }
+
                 let int = field.intersections.find(int => Vector2D.equals(int.position, action.position))
                 if (!int) {
                     int = {
                         position: action.position,
                         intersectionObjects: []
                     }
+                    field.intersections.push(int)
                 }
-                // TODO
+                let intObject = int.intersectionObjects.find(obj => obj.playerId == playerId && obj.type == action.objectType)
+                if (intObject) {
+                    console.debug(`Intersection object ${action.objectType} already exists at ${action.position}`)
+                    return
+                }
+                if (action.objectType == CatanIntersectionObjectType.CITY) {
+                    const settlement = int.intersectionObjects.find(obj => obj.playerId == playerId && obj.type == CatanIntersectionObjectType.SETTLEMENT)
+                    if (!settlement) {
+                        console.debug(`Cant buld city. No setlement at ${action.position}`)
+                        return
+                    }
+                    settlement.type = CatanIntersectionObjectType.CITY
+                } else {
+                    intObject = {
+                        type: action.objectType,
+                        playerId: playerId
+                    }
+                    int.intersectionObjects.push(intObject)
+                }
+
+                this.removeResources(playerPrivateState, resources)
+                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources')
+                syncs.gamePublicStateSync?.sendUpdate('field.intersections')
             },
             onCatanEndTurnAction: (_action: CatanEndTurnAction) => {
                 const publicState = gameState.publicState as CatanPublicGameState
@@ -216,6 +275,32 @@ export class CatanGameService implements GameService {
             }
         }, gameAction)
 
+    }
+
+    checkPlayerHasResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]): boolean {
+        for (let resource of resources) {
+            let playerResource = playerState.resources.find(rc => rc.type == resource.type)
+            if (!playerResource) {
+                return false
+            }
+            if (playerResource.count < resource.count) {
+                return false
+            }
+        }
+        return true
+    }
+
+    removeResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]): boolean {
+        if (!this.checkPlayerHasResources(playerState, resources)) {
+            return false
+        }
+
+        for (let resource of resources) {
+            let playerResource = playerState.resources.find(rc => rc.type == resource.type)!
+            playerResource.count -= resource.count
+        }
+
+        return true
     }
 
     addResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]) {

@@ -84,7 +84,8 @@ export function getVertexNeighborhoodsPositions(vertexPosition: Vector2DLike): V
     ]
 }
 
-export function getVertexEdgesPositions(position: Vector2D): Vector2D[] {
+export function getVertexEdgesPositions(positionLike: Vector2DLike): Vector2D[] {
+    const position = Vector2D.from(positionLike)
     if (isLowerVertex(position)) {
         return [
             position.added(new Vector2D(-1, 2)),

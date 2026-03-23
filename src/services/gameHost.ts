@@ -40,6 +40,11 @@ export default class GameHost {
             retranslateChanges: true,
             peerFiler: isNotGameObserverId
         })
+        this.gameSync.on('syncronized', message => {
+            if (message.parts.find(part => part.path && part.path.startsWith('players['))) {
+                db.updateGame(this.game)
+            }
+        })
         if (this.game.status != GameStatusEnum.CREATED) {
             const dbGameState = await db.getGameState(this.gameId)
             if (dbGameState) {
