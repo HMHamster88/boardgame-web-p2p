@@ -26,7 +26,13 @@ export class Vector2D implements Vector2DLike, Comparable {
         return new Vector2D(Math.cos(angle) * length, Math.sin(angle) * length)
     }
 
-    static equals(v1: Vector2DLike, v2: Vector2DLike): Boolean {
+    static equals(v1: Vector2DLike | undefined, v2: Vector2DLike | undefined): Boolean {
+        if (v1 == v2) {
+            return true
+        }
+        if (v1 == undefined || v2 == undefined) {
+            return false
+        }
         return v1.x == v2.x && v1.y == v2.y
     }
 

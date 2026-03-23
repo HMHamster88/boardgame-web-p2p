@@ -9,8 +9,8 @@ export interface CatanGenerateFieldAction extends GameAction {
 
 export interface CatanEmbarkAction extends GameAction {
     type: 'CatanEmbarkAction';
-    settlements: Vector2DLike[];
-    roads: Vector2DLike[];
+    settlement: Vector2DLike;
+    road: Vector2DLike;
 }
 
 export interface CatanRollDicesAction extends GameAction {

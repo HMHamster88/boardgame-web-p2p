@@ -33,8 +33,9 @@ import { getShuffledArray, rangeArray, recordAsArray, removeCopmarableElements, 
 import { Vector2D } from '../commonTypes/vector2d';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import _ from 'lodash';
-import { distinct } from '../commonTypes/hex-grid/hexData';
 import { sleep } from '../../utils/functionUtils';
+
+const embarkRoadsCount = 2
 
 export function getService(): GameService {
     return new CatanGameService()
@@ -78,7 +79,7 @@ export class CatanGameService implements GameService {
         })
         const publicState: CatanPublicGameState = {
             field: settings.field,
-            phase: CatanGamePhase.EMBARK,
+            phase: CatanGamePhase.EMBARK_FIRST,
             activePlayerIndex: _.random(0, game.players.length - 1),
             winnersIds: [],
             playersStates: publicPlayersStates,
@@ -119,42 +120,53 @@ export class CatanGameService implements GameService {
             onCatanEmbarkAction: (action: CatanEmbarkAction) => {
                 const publicState = gameState.publicState as CatanPublicGameState
                 const field = publicState.field
-                const settlements = action.settlements.map(pos => {
-                    const intersection: CatanIntersection = {
-                        position: pos,
-                        intersectionObjects: [
-                            {
-                                playerId: playerId,
-                                type: CatanIntersectionObjectType.SETTLEMENT
-                            }
-                        ]
-                    }
-                    return intersection
-                })
-                const roads = action.roads.map(pos => {
-                    const road: CatanRoad = {
-                        playerId: playerId,
-                        position: pos
-                    }
-                    return road
-                })
-                field.intersections.push(...settlements)
-                field.roads.push(...roads)
+                const settlement: CatanIntersection = {
+                    position: action.settlement,
+                    intersectionObjects: [
+                        {
+                            playerId: playerId,
+                            type: CatanIntersectionObjectType.SETTLEMENT
+                        }
+                    ]
+                }
+
+                const road: CatanRoad = {
+                    playerId: playerId,
+                    position: action.road
+                }
+
+
+                field.intersections.push(settlement)
+                field.roads.push(road)
 
                 const privateState = gameState.privateState as CatanPrivateGameState
                 const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
 
-                const secondObject = settlements[1]!
-                const hexPoitions = getVertexHexesPositions(secondObject.position!)
-                const hexes = hexPoitions.map(hexPos => field.hexes.find(hex => Vector2D.equals(hexPos, hex.position))).filter(hex => hex)
-                const resources = hexes.map(hex => hex?.type!)
-                    .map(hexType => this.getHexResources(hexType, secondObject.intersectionObjects[0]?.type!))
-                resources.forEach(resource => this.addResources(playerPrivateState, resource))
+                if (publicState.phase == CatanGamePhase.EMBARK_SECOND) {
+                    const hexPoitions = getVertexHexesPositions(settlement.position!)
+                    const hexes = hexPoitions.map(hexPos => field.hexes.find(hex => Vector2D.equals(hexPos, hex.position))).filter(hex => hex)
+                    const resources = hexes.map(hex => hex?.type!)
+                        .map(hexType => this.getHexResources(hexType, settlement.intersectionObjects[0]?.type!))
+                    resources.forEach(resource => this.addResources(playerPrivateState, resource))
+                }
 
+                const roadsCount = field.roads.length
 
-                publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
-                if (distinct(field.roads.map(road => road.playerId), k => k).length == game.players.length) {
-                    publicState.phase = CatanGamePhase.THROWING_DICE
+                if (publicState.phase == CatanGamePhase.EMBARK_FIRST) {
+                    if (roadsCount >= game.players.length) {
+                        publicState.phase = CatanGamePhase.EMBARK_SECOND
+                    } else {
+                        publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
+                    }
+
+                } else if (publicState.phase == CatanGamePhase.EMBARK_SECOND) {
+                    publicState.activePlayerIndex--
+                    if (publicState.activePlayerIndex < 0) {
+                        publicState.activePlayerIndex = game.players.length - 1
+                    }
+                    if (roadsCount >= game.players.length * embarkRoadsCount) {
+                        publicState.phase = CatanGamePhase.THROWING_DICE
+                    }
                 }
 
                 syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources', playerId)

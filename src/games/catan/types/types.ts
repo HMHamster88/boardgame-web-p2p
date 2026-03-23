@@ -5,10 +5,16 @@ import type { CatanGameFieldType } from "./catanGameFieldType";
 import type { CatanTerrainHexType } from "./catanTerrainHexType";
 
 export enum CatanGamePhase {
-    EMBARK = "EMBARK",
+    EMBARK_FIRST = "EMBARK_FIRST",
+    EMBARK_SECOND = "EMBARK_SECOND",
     THROWING_DICE = "THROWING_DICE",
     PLAYER_TURN = "PLAYER_TURN"
 }
+
+export const catanEmbarkPhases: readonly CatanGamePhase[] = [
+    CatanGamePhase.EMBARK_FIRST,
+    CatanGamePhase.EMBARK_SECOND
+]
 
 export enum CatanHarbourType {
     THREE_TO_ONE = "THREE_TO_ONE",
