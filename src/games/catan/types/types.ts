@@ -8,7 +8,9 @@ export enum CatanGamePhase {
     EMBARK_FIRST = "EMBARK_FIRST",
     EMBARK_SECOND = "EMBARK_SECOND",
     THROWING_DICE = "THROWING_DICE",
-    PLAYER_TURN = "PLAYER_TURN"
+    PLAYER_TURN = "PLAYER_TURN",
+    DISCARD_CARDS_7 = "DISCARD_CARDS_7",
+    MOVE_ROBBER = "MOVE_ROBBER"
 }
 
 export const catanEmbarkPhases: readonly CatanGamePhase[] = [
@@ -111,6 +113,7 @@ export interface CatanResourceCount {
 
 export interface CatanPlayerPrivateState extends PlayerPrivateState {
     resources: CatanResourceCount[]
+    discardCardsCount: number
 }
 
 export interface CatanPrivateGameState extends GamePrivateState {

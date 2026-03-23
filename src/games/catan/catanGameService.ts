@@ -91,7 +91,8 @@ export class CatanGameService implements GameService {
         const privatePlayerStates = game.players.map(player => {
             const state: CatanPlayerPrivateState = {
                 playerId: player.userId,
-                resources: []
+                resources: [],
+                discardCardsCount: 0
             }
             return state
         })
@@ -174,6 +175,7 @@ export class CatanGameService implements GameService {
             },
             onCatanRollDicesAction: async () => {
                 const publicState = gameState.publicState as CatanPublicGameState
+                const privateState = gameState.privateState as CatanPrivateGameState
                 const dices = publicState.dices
 
                 dices.redDice = 0
@@ -186,11 +188,30 @@ export class CatanGameService implements GameService {
 
                 const allDiceValue = (publicState.dices.redDice as number) + (publicState.dices.yellowDice)
 
+                if (allDiceValue == 7) {
+                    let anyoneHasResourceExcess = false
+                    for (let player of privateState.playersStates) {
+                        const discardCardsCount = this.allResourcesCount(player.resources) - this.maxPlayerResources(player)
+                        if (discardCardsCount > 0) {
+                            player.discardCardsCount = discardCardsCount
+                            anyoneHasResourceExcess = true
+                            syncs.playerPrivateStateSync.get(player.playerId)?.sendUpdate('discardCardsCount')
+                        }
+                    }
+                    if (anyoneHasResourceExcess) {
+                        publicState.phase = CatanGamePhase.DISCARD_CARDS_7
+                    } else {
+                        publicState.phase = CatanGamePhase.MOVE_ROBBER
+                    }
+                    syncs.gamePublicStateSync?.sendUpdate(['dices', 'phase'])
+                    return
+                }
+
                 const field = publicState.field
                 const hexes = field.hexes.filter(hex => hex.circularNumber == allDiceValue)
 
                 const playersUpdateId: string[] = []
-                const privateState = gameState.privateState as CatanPrivateGameState
+
                 for (let hex of hexes) {
                     const intObjects = findByCoordsArray(getHexVerticesPositions(hex.position), field.intersections)
                         .flatMap(int => int.intersectionObjects)
@@ -287,6 +308,14 @@ export class CatanGameService implements GameService {
             }
         }, gameAction)
 
+    }
+
+    allResourcesCount(resources: CatanResourceCount[]) {
+        return resources.map(resource => resource.count).reduce((a, c) => a + c, 0)
+    }
+
+    maxPlayerResources(playerState: CatanPlayerPrivateState) {
+        return 7
     }
 
     checkPlayerHasResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]): boolean {
