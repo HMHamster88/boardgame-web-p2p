@@ -69,9 +69,10 @@ export default class GameClient extends EventEmitter<GameClientEvents> {
         })
 
         this.connection.on('peerDisconnected', (peerId) => {
-            if (peerId == this.gameId) {
+            if (peerId == getGamePeerId(this.gameId)) {
                 this.connectStatus = ConnectStatus.DISCONNECTED
                 this.emit('connectStatusChanged', this.connectStatus)
+                this.close()
             }
         })
     }
