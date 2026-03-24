@@ -73,9 +73,11 @@ export interface TypedMessage {
     type: string
 }
 
-export function handleMessage(handlers: any, message: TypedMessage) {
+export function handleMessage(handlers: any, message: TypedMessage): boolean {
     const handler = handlers['on' + message.type]
     if (handler) {
         handler(message)
+        return true
     }
+    return false
 }

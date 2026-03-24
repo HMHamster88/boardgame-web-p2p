@@ -26,6 +26,10 @@ interface ObjectSyncEvents {
     syncronized: (message: ObjectSyncMessage) => void
 }
 
+type PropName<T extends object> = T extends string | symbol
+    ? T
+    : keyof T;
+
 export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents> {
     id: string
     value?: T
@@ -70,6 +74,38 @@ export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents>
                 }
             }
         })
+    }
+
+    sendUpdateTS(props: PropName<T>[] | PropName<T>, peerFilter: string | PeerFilter | null = null) {
+        let parts: ObjectSyncPart[] = []
+
+        if (!this.value) {
+            return
+        }
+
+        if (Array.isArray(props)) {
+            parts = props.map(prop => {
+                const propVal: any = this.value![prop]
+                const part: ObjectSyncPart = {
+                    path: prop.toString(),
+                    value: propVal
+                }
+                return part
+            })
+        } else {
+            parts = [
+                {
+                    path: props.toString(),
+                    value: this.value![props]
+                }
+            ]
+        }
+        const updateMessage: ObjectSyncMessage = {
+            type: 'ObjectSyncMessage',
+            objectId: this.id,
+            parts: parts
+        }
+        this.sendMessage(updateMessage, peerFilter)
     }
 
     sendUpdate(paths: string[] | string | null = null, peerFilter: string | PeerFilter | null = null) {

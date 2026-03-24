@@ -34,6 +34,7 @@ import { Vector2D } from '../commonTypes/vector2d';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import _ from 'lodash';
 import { sleep } from '../../utils/functionUtils';
+import type { ObjectSync } from '../../p2p/objectSync';
 
 const embarkRoadsCount = 2
 
@@ -113,14 +114,34 @@ export class CatanGameService implements GameService {
 
     performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): void {
         const settings = game.settings as CatanGameSettings
-        handleMessage({
+
+        const isSettingsAction = handleMessage({
             onCatanGenerateFieldAction: () => {
                 settings.field = this.generateField(settings.fieldType)
-                syncs.gameSync?.sendUpdate('settings')
-            },
+                syncs.gameSync?.sendUpdateTS('settings')
+            }
+        }, gameAction)
+
+        if (isSettingsAction) {
+            return
+        }
+
+        const publicState = gameState.publicState as CatanPublicGameState
+        const field = publicState.field
+        const privateState = gameState.privateState as CatanPrivateGameState
+        const activePlayer = game.players[publicState.activePlayerIndex]
+        const activePlayerId = activePlayer?.userId
+        const activePlayerPrivteState = privateState.playersStates[publicState.activePlayerIndex]
+        const isActivePlayerAction = playerId == activePlayerId
+        const gamePublicStateSync = syncs.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
+        const playerPrivateStateSync = syncs.playerPrivateStateSync as any as Map<string, ObjectSync<CatanPlayerPrivateState>>
+
+        handleMessage({
             onCatanEmbarkAction: (action: CatanEmbarkAction) => {
-                const publicState = gameState.publicState as CatanPublicGameState
-                const field = publicState.field
+                if (!isActivePlayerAction || !activePlayerPrivteState) {
+                    return
+                }
+
                 const settlement: CatanIntersection = {
                     position: action.settlement,
                     intersectionObjects: [
@@ -140,15 +161,12 @@ export class CatanGameService implements GameService {
                 field.intersections.push(settlement)
                 field.roads.push(road)
 
-                const privateState = gameState.privateState as CatanPrivateGameState
-                const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
-
                 if (publicState.phase == CatanGamePhase.EMBARK_SECOND) {
                     const hexPoitions = getVertexHexesPositions(settlement.position!)
                     const hexes = hexPoitions.map(hexPos => field.hexes.find(hex => Vector2D.equals(hexPos, hex.position))).filter(hex => hex)
                     const resources = hexes.map(hex => hex?.type!)
                         .map(hexType => this.getHexResources(hexType, settlement.intersectionObjects[0]?.type!))
-                    resources.forEach(resource => this.addResources(playerPrivateState, resource))
+                    resources.forEach(resource => this.addResources(activePlayerPrivteState, resource))
                 }
 
                 const roadsCount = field.roads.length
@@ -170,17 +188,19 @@ export class CatanGameService implements GameService {
                     }
                 }
 
-                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources', playerId)
-                syncs.gamePublicStateSync?.sendUpdate(['field.intersections', 'field.roads', 'activePlayerIndex', 'phase'])
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources', playerId)
+                gamePublicStateSync.sendUpdate(['field.intersections', 'field.roads', 'activePlayerIndex', 'phase'])
             },
             onCatanRollDicesAction: async () => {
-                const publicState = gameState.publicState as CatanPublicGameState
-                const privateState = gameState.privateState as CatanPrivateGameState
+                if (!isActivePlayerAction || !activePlayerPrivteState) {
+                    return
+                }
+
                 const dices = publicState.dices
 
                 dices.redDice = 0
                 dices.yellowDice = 0
-                syncs.gamePublicStateSync?.sendUpdate('dices')
+                gamePublicStateSync.sendUpdateTS('dices')
                 await sleep(1000)
 
                 dices.redDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
@@ -195,7 +215,7 @@ export class CatanGameService implements GameService {
                         if (discardCardsCount > 0) {
                             player.discardCardsCount = discardCardsCount
                             anyoneHasResourceExcess = true
-                            syncs.playerPrivateStateSync.get(player.playerId)?.sendUpdate('discardCardsCount')
+                            playerPrivateStateSync.get(player.playerId)?.sendUpdateTS('discardCardsCount')
                         }
                     }
                     if (anyoneHasResourceExcess) {
@@ -203,11 +223,10 @@ export class CatanGameService implements GameService {
                     } else {
                         publicState.phase = CatanGamePhase.MOVE_ROBBER
                     }
-                    syncs.gamePublicStateSync?.sendUpdate(['dices', 'phase'])
+                    gamePublicStateSync.sendUpdateTS(['dices', 'phase'])
                     return
                 }
 
-                const field = publicState.field
                 const hexes = field.hexes.filter(hex => hex.circularNumber == allDiceValue)
 
                 const playersUpdateId: string[] = []
@@ -225,19 +244,18 @@ export class CatanGameService implements GameService {
                     })
                 }
 
-                playersUpdateId.forEach(playerId => syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources'))
+                playersUpdateId.forEach(playerId => playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources'))
 
                 publicState.phase = CatanGamePhase.PLAYER_TURN
-                syncs.gamePublicStateSync?.sendUpdate(['dices', 'phase'])
+                gamePublicStateSync.sendUpdateTS(['dices', 'phase'])
             },
             onCatanBuildRoadAction: (action: CatanBuildRoadAction) => {
-                const publicState = gameState.publicState as CatanPublicGameState
-                const privateState = gameState.privateState as CatanPrivateGameState
-                const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
-                const field = publicState.field
+                if (!isActivePlayerAction || !activePlayerPrivteState) {
+                    return
+                }
 
                 const resources = getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
-                if (!this.checkPlayerHasResources(playerPrivateState, resources)) {
+                if (!this.checkPlayerHasResources(activePlayerPrivteState, resources)) {
                     return
                 }
 
@@ -252,19 +270,18 @@ export class CatanGameService implements GameService {
                     position: action.position
                 }
                 field.roads.push(road)
-                this.removeResources(playerPrivateState, resources)
-                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources')
-                syncs.gamePublicStateSync?.sendUpdate('field.roads')
+                this.removeResources(activePlayerPrivteState, resources)
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                gamePublicStateSync?.sendUpdate('field.roads')
             },
             onCatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
-                const publicState = gameState.publicState as CatanPublicGameState
-                const privateState = gameState.privateState as CatanPrivateGameState
-                const playerPrivateState = privateState.playersStates.find(pl => pl.playerId == playerId)!
-                const field = publicState.field
+                if (!isActivePlayerAction || !activePlayerPrivteState) {
+                    return
+                }
 
                 const buyItemType = intersectionObjectRoBuyItem(action.objectType)!
                 const resources = getBuyItems().find(item => item.type == buyItemType)?.resources!
-                if (!this.checkPlayerHasResources(playerPrivateState, resources)) {
+                if (!this.checkPlayerHasResources(activePlayerPrivteState, resources)) {
                     return
                 }
 
@@ -296,15 +313,17 @@ export class CatanGameService implements GameService {
                     int.intersectionObjects.push(intObject)
                 }
 
-                this.removeResources(playerPrivateState, resources)
-                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('resources')
-                syncs.gamePublicStateSync?.sendUpdate('field.intersections')
+                this.removeResources(activePlayerPrivteState, resources)
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                gamePublicStateSync.sendUpdate('field.intersections')
             },
             onCatanEndTurnAction: (_action: CatanEndTurnAction) => {
-                const publicState = gameState.publicState as CatanPublicGameState
+                if (!isActivePlayerAction || !activePlayerPrivteState) {
+                    return
+                }
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
                 publicState.phase = CatanGamePhase.THROWING_DICE
-                syncs.gamePublicStateSync?.sendUpdate(['activePlayerIndex', 'phase'])
+                gamePublicStateSync.sendUpdateTS(['activePlayerIndex', 'phase'])
             }
         }, gameAction)
 
@@ -314,7 +333,7 @@ export class CatanGameService implements GameService {
         return resources.map(resource => resource.count).reduce((a, c) => a + c, 0)
     }
 
-    maxPlayerResources(playerState: CatanPlayerPrivateState) {
+    maxPlayerResources(_playerState: CatanPlayerPrivateState) {
         return 7
     }
 
