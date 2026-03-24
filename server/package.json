@@ -10,7 +10,8 @@
     "clean": "shx rm -rf dist",
     "build:bundle": "node build-bundle.js",
     "build:sea": "shx mkdir -p dist/sea && shx cp -r public dist/sea/public && node --build-sea sea-config.json",
-    "build:all": "npm run clean && npm run build:bundle && npm run build:sea"
+    "build:copy-env": "shx cp .env dist/sea",
+    "build:all": "npm run clean && npm run build:bundle && npm run build:sea && npm run build:copy-env"
   },
   "author": "",
   "license": "ISC",

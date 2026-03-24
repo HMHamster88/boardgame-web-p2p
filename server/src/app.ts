@@ -1,15 +1,11 @@
 import express from 'express';
 import { configDotenv } from 'dotenv';
 import history from 'connect-history-api-fallback';
-import Turn from 'node-turn';
-import { Aedes } from 'aedes'
-import { createServer } from 'aedes-server-factory'
 
 configDotenv();
 
-const app = express()
+const app = express();
 const port = process.env.PORT ?? 8000;
-const mqttPort = process.env.MQTT_PORT ?? 8888
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -28,19 +24,17 @@ app.use(
 app.use(staticMw);
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Static server is running on port ${port}`);
 });
 
-Aedes.createBroker().then(aedes => {
-    console.log('Aedes created')
-    const httpServer = createServer(aedes, { ws: true })
-    httpServer.listen(mqttPort, function () {
-        console.log('websocket server listening on port ', mqttPort)
-    })
-})
+if (process.env.MQTT) {
+    import('./mqtt').then((module) => {
+        module.default();
+    });
+}
 
-const server = new Turn({
-    authMech: 'none'
-});
-
-server.start();
+if (process.env.TURN) {
+    import('./turn').then((module) => {
+        module.default();
+    });
+}
