@@ -21,6 +21,7 @@ declare module 'vue' {
     DataView: typeof import('primevue/dataview')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Dice: typeof import('./src/components/Dice.vue')['default']
+    EditGameJsonDialog: typeof import('./src/components/EditGameJsonDialog.vue')['default']
     GamesList: typeof import('./src/components/GamesList.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
@@ -32,6 +33,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
     Slider: typeof import('primevue/slider')['default']
+    Textarea: typeof import('primevue/textarea')['default']
     Toast: typeof import('primevue/toast')['default']
   }
   export interface GlobalDirectives {

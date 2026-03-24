@@ -184,6 +184,17 @@ export default class GameHost {
         })
     }
 
+    updateStateFromJson(json: string) {
+        Object.assign(this.gameState, JSON.parse(json))
+        db.updateGameState(this.gameState)
+        this.gamePublicStateSync.value = this.gameState.publicState
+        this.gamePublicStateSync.sendUpdate()
+        this.playerPrivateStateSync.forEach((ps, playerId) => {
+            ps.value = this.gameState.privateState?.playersStates?.find(pl => pl.playerId == playerId)
+            ps.sendUpdate(null, playerId)
+        })
+    }
+
     createPlayerPrivateStateSync(userId: string): ObjectSync<PlayerPrivateState> | null {
         if (this.playerPrivateStateSync.has(userId)) {
             return null

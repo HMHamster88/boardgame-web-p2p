@@ -63,6 +63,8 @@
             </component>
         </template>
     </Card>
+
+    <EditGameJsonDialog ref="editGame"></EditGameJsonDialog>
 </template>
 
 <script setup lang="ts">
@@ -84,6 +86,7 @@ import type { GameService } from '../services/gameService/gameService';
 import type { GameAction } from '../services/messages';
 import { useI18n } from 'vue-i18n';
 import { soundService } from '../services/soundService';
+import EditGameJsonDialog from '../components/EditGameJsonDialog.vue';
 
 const { t } = useI18n({
     locale: 'en',
@@ -261,11 +264,24 @@ function join() {
     gameClient.join(localStore.user.name, localStore.user.color);
 }
 
+const editGameDialog = useTemplateRef('editGame')
+
+const handleGlobalKeydown = async (event: KeyboardEvent) => {
+    if (event.ctrlKey && event.key === 'q') {
+        const result = await editGameDialog.value?.open(gameHost.gameState)
+        if (result) {
+            gameHost.updateStateFromJson(result)
+        }
+    }
+};
+
 onBeforeUnmount(() => {
     gameClient.close()
+    document.removeEventListener('keydown', handleGlobalKeydown)
 })
 
 onMounted(async () => {
+    document.addEventListener('keydown', handleGlobalKeydown);
     await gameHost.start()
     gameClient.on('connectStatusChanged', (status) => {
         switch (status) {
