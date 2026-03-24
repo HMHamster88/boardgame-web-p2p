@@ -43,6 +43,14 @@ export function getService(): GameService {
 }
 
 export class CatanGameService implements GameService {
+    localization: any = {
+        en: {
+            CATAN: 'Catan'
+        },
+        ru: {
+            CATAN: 'Колонизаторы'
+        }
+    }
     gameType: string = 'CATAN'
     gameName: string = 'Catan'
 

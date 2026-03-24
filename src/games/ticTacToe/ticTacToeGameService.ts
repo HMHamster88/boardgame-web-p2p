@@ -15,6 +15,15 @@ export function getService(): GameService {
 }
 
 export class TicTacToeGameService implements GameService {
+    localization: any = {
+        en: {
+            TIC_TAC_TOE: 'Tic Tac Toe'
+        },
+        ru: {
+            TIC_TAC_TOE: 'Крестики нолики'
+        }
+    }
+
     readonly gameName: string = 'Tic Tac Toe'
     readonly gameType: string = 'TIC_TAC_TOE'
     readonly gameViewComponent: Component = TickTacToeGameView

@@ -19,6 +19,7 @@ export interface GameService {
     readonly gameViewComponent: Component
     readonly gameType: string
     readonly gameName: string
+    readonly localization: any
 }
 
 

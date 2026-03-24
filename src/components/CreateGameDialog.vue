@@ -6,8 +6,8 @@
         </div>
         <div class="flex items-center gap-4 mb-8">
             <label for="type" class="font-semibold w-24">{{ t('gameType') }}</label>
-            <Select id="type" v-model="type" :options="gameTypes" optionLabel="name" placeholder="Select a Type"
-                class="flex-auto" />
+            <Select id="type" v-model="type" :options="allGameServicesTypes" :optionLabel="getGameName"
+                placeholder="Select a Type" class="flex-auto" />
         </div>
         <div class="flex justify-end gap-2">
             <Button type="button" :label="$t('cancel')" severity="secondary" @click="close(false)"></Button>
@@ -20,43 +20,55 @@
 import { ref, watch } from 'vue';
 import { type CrateGameProps } from '../db/game';
 import { useLocalStore } from '../services/localStore'
-import getGameSerivce, { typedGameNames, type TypedName } from '../services/gameService/gameServiceSelector';
+import { allGameServices, allGameServicesTypes } from '../services/gameService/gameServiceSelector';
 import { useI18n } from 'vue-i18n';
+import _ from 'lodash';
+
+let localization: any = {
+    en: {
+        createGame: 'Create Game',
+        gameName: 'Name',
+        gameType: 'Type',
+        newGame: 'New Game'
+    },
+    ru: {
+        createGame: 'Создать игру',
+        gameName: 'Название',
+        gameType: 'Тип',
+        newGame: 'Новая игра'
+    }
+}
+
+allGameServices.forEach(service => {
+    if (service.localization) {
+        localization = _.merge(localization, service.localization)
+    }
+})
 
 const { t } = useI18n({
     locale: 'en',
-    messages: {
-        en: {
-            createGame: 'Create Game',
-            gameName: 'Name',
-            gameType: 'Type',
-            newGame: 'New Game'
-
-        },
-        ru: {
-            createGame: 'Создать игру',
-            gameName: 'Название',
-            gameType: 'Тип',
-            newGame: 'Новая игра'
-        }
-    }
+    messages: localization
 })
+
+function getGameName(gameType: string) {
+    return t(gameType)
+}
 
 const localStore = useLocalStore();
 
 const showDialog = ref(false)
 
 
-const gameTypes = ref<TypedName[]>(typedGameNames)
+const gameTypes = ref<string[]>(allGameServicesTypes)
 
-const type = ref<TypedName>(gameTypes.value[0]!)
+const type = ref<string>(gameTypes.value[0]!)
 
-const name = ref(getGameSerivce(type.value.type).gameName)
+const name = ref(t(type.value))
 
 var openPromise: Promise<CrateGameProps>
 
 watch(type, newType => {
-    name.value = getGameSerivce(newType.type).gameName
+    name.value = t(newType)
 })
 
 var openPromiseResolve: (value: CrateGameProps | PromiseLike<CrateGameProps>) => void
@@ -75,7 +87,7 @@ function close(save: boolean) {
     if (save) {
         openPromiseResolve({
             name: name.value,
-            type: type.value.type,
+            type: type.value,
             owner: localStore.user.id
         })
     } else {

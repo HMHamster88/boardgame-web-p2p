@@ -26,18 +26,9 @@ const gameServices = new Map<string, GameService>(gameModiles.map((module) => {
     return [gameService.gameType, gameService]
 }))
 
-export interface TypedName {
-    type: string,
-    name: string
-}
+export const allGameServicesTypes = Array.from(gameServices.keys())
 
-export const typedGameNames = Array.from(gameServices.values())
-    .map(gameSerivce => {
-        return {
-            type: gameSerivce.gameType,
-            name: gameSerivce.gameName
-        }
-    })
+export const allGameServices = Array.from(gameServices.values())
 
 function getGameSerivce(gameType: string): GameService {
     return gameServices.get(gameType)!

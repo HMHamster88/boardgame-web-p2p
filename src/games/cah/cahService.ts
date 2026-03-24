@@ -19,6 +19,14 @@ export function getService(): GameService {
 }
 
 export class CahService implements GameService {
+    localization: any = {
+        en: {
+            CARDS_AGAINST_HUMANITY: 'Cards Against Humanity'
+        },
+        ru: {
+            CARDS_AGAINST_HUMANITY: 'Карты против всех'
+        }
+    }
     readonly gameName: string = 'Cards Against Humanity'
     readonly gameType: string = 'CARDS_AGAINST_HUMANITY'
     settingsComponent: Component = CahSettings
