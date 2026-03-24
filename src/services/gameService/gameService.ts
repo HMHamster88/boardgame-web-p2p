@@ -14,7 +14,7 @@ export interface GameObjectSyncs {
 export interface GameService {
     createGame(props: CrateGameProps): Game
     startGame(game: Game): GameState
-    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): void
+    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): Promise<void>
     readonly settingsComponent: Component
     readonly gameViewComponent: Component
     readonly gameType: string

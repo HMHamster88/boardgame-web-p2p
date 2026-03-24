@@ -67,7 +67,7 @@ export class TicTacToeGameService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string, syncs: GameObjectSyncs): void {
+    async performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string, syncs: GameObjectSyncs): Promise<void> {
         if (game.status != GameStatusEnum.STARTED) {
             return
         }

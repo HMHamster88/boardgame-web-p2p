@@ -73,10 +73,10 @@ export interface TypedMessage {
     type: string
 }
 
-export function handleMessage(handlers: any, message: TypedMessage): boolean {
+export async function handleMessage(handlers: any, message: TypedMessage): Promise<boolean> {
     const handler = handlers['on' + message.type]
     if (handler) {
-        handler(message)
+        await handler(message)
         return true
     }
     return false

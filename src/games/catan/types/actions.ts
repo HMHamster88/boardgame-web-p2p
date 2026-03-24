@@ -1,6 +1,6 @@
 import type { GameAction } from "../../../services/messages";
 import type { Vector2DLike } from "../../commonTypes/vector2d";
-import type { CatanIntersectionObjectType } from "./types";
+import type { CatanIntersectionObjectType, CatanResourceCount } from "./types";
 
 
 export interface CatanGenerateFieldAction extends GameAction {
@@ -31,3 +31,9 @@ export interface CatanBuildRoadAction extends GameAction {
 export interface CatanEndTurnAction extends GameAction {
     type: 'CatanEndTurnAction'
 }
+
+export interface CatanDiscardResourceCards extends GameAction {
+    type: 'CatanDiscardResourceCards'
+    resources: CatanResourceCount[]
+}
+

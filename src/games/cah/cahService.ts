@@ -94,7 +94,7 @@ export class CahService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): void {
+    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): Promise<void> {
         const publicState = gameState.publicState as CahGamePublicState
         const privateState = gameState.privateState as CahGamePrivateState
         const activePlayerId = game.players[gameState.publicState.activePlayerIndex]?.userId

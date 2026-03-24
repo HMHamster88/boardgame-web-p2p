@@ -26,7 +26,7 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanEmbarkAction, type CatanEndTurnAction } from "./types/actions";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction } from "./types/actions";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { getShuffledArray, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
@@ -120,10 +120,10 @@ export class CatanGameService implements GameService {
         return gameState
     }
 
-    performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): void {
+    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): Promise<void> {
         const settings = game.settings as CatanGameSettings
 
-        const isSettingsAction = handleMessage({
+        const isSettingsAction = await handleMessage({
             onCatanGenerateFieldAction: () => {
                 settings.field = this.generateField(settings.fieldType)
                 syncs.gameSync?.sendUpdateTS('settings')
@@ -139,12 +139,13 @@ export class CatanGameService implements GameService {
         const privateState = gameState.privateState as CatanPrivateGameState
         const activePlayer = game.players[publicState.activePlayerIndex]
         const activePlayerId = activePlayer?.userId
+        const privatePlayerState = privateState.playersStates.find(pl => pl.playerId == playerId)!
         const activePlayerPrivteState = privateState.playersStates[publicState.activePlayerIndex]
         const isActivePlayerAction = playerId == activePlayerId
         const gamePublicStateSync = syncs.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
         const playerPrivateStateSync = syncs.playerPrivateStateSync as any as Map<string, ObjectSync<CatanPlayerPrivateState>>
 
-        handleMessage({
+        await handleMessage({
             onCatanEmbarkAction: (action: CatanEmbarkAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
@@ -219,8 +220,11 @@ export class CatanGameService implements GameService {
                 if (allDiceValue == 7) {
                     let anyoneHasResourceExcess = false
                     for (let player of privateState.playersStates) {
-                        const discardCardsCount = this.allResourcesCount(player.resources) - this.maxPlayerResources(player)
-                        if (discardCardsCount > 0) {
+                        const allResourcesCount = this.allResourcesCount(player.resources)
+                        const maxPlayerResources = this.maxPlayerResources(player)
+
+                        if (allResourcesCount > maxPlayerResources) {
+                            const discardCardsCount = Math.ceil(allResourcesCount / 2)
                             player.discardCardsCount = discardCardsCount
                             anyoneHasResourceExcess = true
                             playerPrivateStateSync.get(player.playerId)?.sendUpdateTS('discardCardsCount')
@@ -332,6 +336,20 @@ export class CatanGameService implements GameService {
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
                 publicState.phase = CatanGamePhase.THROWING_DICE
                 gamePublicStateSync.sendUpdateTS(['activePlayerIndex', 'phase'])
+            },
+            onCatanDiscardResourceCards: (action: CatanDiscardResourceCards) => {
+                if (privatePlayerState.discardCardsCount != this.allResourcesCount(action.resources)) {
+                    console.debug('Invalid card discard count')
+                    return
+                }
+
+                this.removeResources(privatePlayerState, action.resources)
+                privatePlayerState.discardCardsCount = 0
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS(['resources', 'discardCardsCount'])
+                if (privateState.playersStates.every(ps => ps.discardCardsCount == 0)) {
+                    publicState.phase == CatanGamePhase.MOVE_ROBBER
+                    gamePublicStateSync.sendUpdateTS('phase')
+                }
             }
         }, gameAction)
 

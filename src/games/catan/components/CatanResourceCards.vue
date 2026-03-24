@@ -2,9 +2,11 @@
     <div>
         <div class="flex justify-center mt-2">
             <div class="resource-cards-container">
-                <div v-for="resource in flatResources" class="resource-card"
+                <div v-for="resource, index in flatResources" class="resource-card"
+                    :class="{ 'resource-card-selected': selectedCardsInds.includes(index) }"
+                    v-on:click="cardClick(index)"
                     style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <img :src="resourceCardsImg[resource.type]" class="resource-card-image">
+                    <img :src="resourceCardsImg[resource]" class="resource-card-image">
 
                     </img>
                 </div>
@@ -22,10 +24,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue';
-import type { CatanResourceCount } from '../types/types';
+import { computed, ref, type PropType } from 'vue';
+import type { CatanResourceCount, CatanResourceType } from '../types/types';
 import { resourceCardsImg, resourcesImages } from './graphics';
-import { rangeArray } from '../../../utils/arrayUtils';
+import { rangeArray, removeElement } from '../../../utils/arrayUtils';
+
+const model = defineModel<CatanResourceCount[]>()
+
+const selectedCardsInds = ref<number[]>([])
+function cardClick(index: number) {
+
+    if (selectedCardsInds.value.includes(index)) {
+        removeElement(selectedCardsInds.value, index)
+    } else {
+        selectedCardsInds.value.push(index)
+    }
+
+    model.value = getSelectedResources()
+}
+
+function getSelectedResources() {
+    const counts: any = {}
+    for (let index of selectedCardsInds.value) {
+        const resurceType = flatResources.value[index]!
+        if (counts[resurceType]) {
+            counts[resurceType]++
+        } else {
+            counts[resurceType] = 1
+        }
+    }
+    return Object.entries(counts).map(([name, matches]) => {
+        return {
+            type: name as CatanResourceType,
+            count: matches as number
+        } as CatanResourceCount
+    })
+}
 
 const props = defineProps({
     resources: {
@@ -35,7 +69,7 @@ const props = defineProps({
 })
 
 const flatResources = computed(() => {
-    return props.resources.flatMap(resource => rangeArray(resource.count).map(() => resource))
+    return props.resources.flatMap(resource => rangeArray(resource.count).map(() => resource.type))
 })
 
 </script>
@@ -45,12 +79,13 @@ const flatResources = computed(() => {
     display: flex;
     overflow: auto;
     gap: 1rem;
-    margin-top: 2rem;
+    padding-top: 2rem;
     padding-bottom: 1rem;
 }
 
 .resource-card {
     border-radius: 8px;
+    cursor: pointer;
 }
 
 .resource-card-image {
@@ -67,5 +102,9 @@ const flatResources = computed(() => {
 .resource-icon {
     width: 2rem;
     max-width: 2rem;
+}
+
+.resource-card-selected {
+    margin-top: -2rem;
 }
 </style>

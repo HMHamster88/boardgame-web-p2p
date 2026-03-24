@@ -5,13 +5,16 @@
             :players="game.players" @intersection-overlay-click="intersectionOverlayClick"
             :all-dice-value="allDiceValue"></CatanHexGrid>
     </div>
+
+    <div class="flex justify-center items-center mb-2">{{ status }}</div>
     <div class="flex gap-2 justify-center items-center">
-        <Button v-if="showEmbarkButton" @click="embark" :disabled="!canEmbark">Embark</Button>
+        <Button v-if="showEmbarkButton" @click="embark" :disabled="!canEmbark">{{ t('embark') }}</Button>
         <div :class="diceContainerClass" v-on:click="rollDices">
             <Dice color="#ee3232" :result="dices.redDice" :highlight="canRollDices"></Dice>
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
-        <Button v-on:click="buyClick" :disabled="!canBuy">{{ t('buy') }}</Button>
+        <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
+        }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
@@ -24,10 +27,11 @@
                 </li>
             </ul>
         </Popover>
+        <Button v-if="needToDiscardCards" :disabled="!discardCardsEnabled" v-on:click="discardCards">Discard
+            Cards</Button>
         <Button :disabled="!canEndTurn" v-on:click="endTurn()">{{ t('endTurn') }}</Button>
     </div>
-
-    <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources"
+    <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
         :resources="playerPrivateState.resources">
     </CatanResourceCards>
 </template>
@@ -55,7 +59,7 @@ import {
     type CatanResourceCount,
     type CatanRoad
 } from '../types/types';
-import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
+import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanDiscardResourceCards, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
 import type { GameAction } from '../../../services/messages';
 import type Game from '../../../db/game';
 import { rangeArray, removeElement } from '../../../utils/arrayUtils';
@@ -74,7 +78,23 @@ const { t } = useI18n({
                 'CITY': 'City',
                 'DEVELOPMENT_CARD': 'Development Card'
             },
-            endTurn: 'End Turn'
+            endTurn: 'End Turn',
+            embark: 'Embark',
+            status: {
+                localPlayer: {
+                    THROWING_DICE: 'Throw dices',
+                    PLAYER_TURN: 'Your turn'
+                },
+                notLocalPlayer: {
+                    THROWING_DICE: '{player} throwing dices',
+                    PLAYER_TURN: '{player} turn'
+                }
+            },
+            build: {
+                ROAD: 'Choose place for road',
+                SETTLEMENT: 'Choose place for settlement',
+                CITY: 'Choose settlement for upgrade'
+            }
         },
         ru: {
             buy: 'Купить',
@@ -84,9 +104,60 @@ const { t } = useI18n({
                 'CITY': 'Город',
                 'DEVELOPMENT_CARD': 'Карта развития'
             },
-            endTurn: 'Закончить ход'
+            endTurn: 'Закончить ход',
+            embark: 'Высадисться',
+            status: {
+                localPlayer: {
+                    THROWING_DICE: 'Ваш ход. Кидайте кубы',
+                    PLAYER_TURN: 'Ваш ход',
+                    DISCARD_CARDS_7: 'Выпало 7 необходимо сбросить карты {count} шт'
+                },
+                notLocalPlayer: {
+                    THROWING_DICE: '{player} кидает кубы',
+                    PLAYER_TURN: '{player} ходит',
+                    DISCARD_CARDS_7: 'Выпало 7 игроки сбрасывают карты'
+                }
+            },
+            build: {
+                ROAD: 'Выберите место для дороги',
+                SETTLEMENT: 'Выберите место для поселения',
+                CITY: 'Выберите поселение для улучшения'
+            }
         }
     }
+})
+
+const status = computed(() => {
+    const phase = props.gameState.phase
+    if (buildItemType.value) {
+        return t('build.' + buildItemType.value as string)
+    }
+    if (phase == CatanGamePhase.DISCARD_CARDS_7) {
+        const playerPart = props.playerPrivateState.discardCardsCount > 0 ? 'localPlayer' : 'notLocalPlayer'
+        return t(`status.${playerPart}.${phase}`, props.playerPrivateState.discardCardsCount)
+    }
+    const playerPart = isLocalPlayerTurn.value ? 'localPlayer' : 'notLocalPlayer'
+    return t(`status.${playerPart}.${phase}`, { player: props.game.players[props.gameState.activePlayerIndex]?.name })
+})
+
+const selectedResorceCards = ref<CatanResourceCount[]>([])
+
+function discardCards() {
+    if (discardCardsEnabled) {
+        performAction<CatanDiscardResourceCards>({
+            type: 'CatanDiscardResourceCards',
+            resources: selectedResorceCards.value
+        })
+        selectedResorceCards.value = []
+    }
+}
+
+const needToDiscardCards = computed(() => {
+    return props.playerPrivateState.discardCardsCount > 0
+})
+
+const discardCardsEnabled = computed(() => {
+    return props.playerPrivateState.discardCardsCount == selectedResorceCards.value.map(resource => resource.count).reduce((a, c) => a + c, 0)
 })
 
 const buildItemType = ref<CatanBuyItemType | undefined>()
@@ -106,6 +177,7 @@ const embarkData = ref<EmbarkData>({
 const buyItems = ref(getBuyItems())
 
 const buyClick = (event: Event) => {
+    buildItemType.value = undefined
     buyMenu.value?.toggle(event)
 }
 
@@ -257,6 +329,7 @@ function roadOverlayClick(position: Vector2D) {
                     type: 'CatanBuildRoadAction',
                     position: position
                 })
+                buildItemType.value = undefined
             }
         }
     }
@@ -319,6 +392,7 @@ function intersectionOverlayClick(position: Vector2D) {
                     position: position,
                     objectType: intObjectType
                 })
+                buildItemType.value = undefined
             }
         }
     }
@@ -340,6 +414,10 @@ function canBuildIntObject(intObjectType: CatanIntersectionObjectType, position:
                 return false
             }
             if (intObjectType == CatanIntersectionObjectType.CITY && !hasSettelment) {
+                return false
+            }
+        } else {
+            if (intObjectType == CatanIntersectionObjectType.CITY) {
                 return false
             }
         }

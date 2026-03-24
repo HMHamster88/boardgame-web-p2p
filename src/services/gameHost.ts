@@ -95,13 +95,13 @@ export default class GameHost {
                     sync.sendUpdate(null, peerId)
                 })
             },
-            onGameActionMessage: (peerId: string, message: GameActionMessage) => {
+            onGameActionMessage: async (peerId: string, message: GameActionMessage) => {
                 this.gameSync.updateSended = false
                 if (this.gamePublicStateSync) {
                     this.gamePublicStateSync.updateSended = false
                 }
                 this.playerPrivateStateSync.forEach(sync => sync.updateSended = false)
-                this.gameService.performAction(this.game, this.gameState, message.action, peerId,
+                await this.gameService.performAction(this.game, this.gameState, message.action, peerId,
                     {
                         gameSync: this.gameSync,
                         gamePublicStateSync: this.gamePublicStateSync,
