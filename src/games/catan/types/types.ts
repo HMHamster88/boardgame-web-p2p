@@ -72,7 +72,8 @@ export interface CatanField {
     hexes: CatanTerrainHex[]
     harbours: CatanHarbour[]
     roads: CatanRoad[]
-    intersections: CatanIntersection[]
+    intersections: CatanIntersection[],
+    robberPos: Vector2DLike
 }
 
 export interface CatanGameSettings extends GameSettings {

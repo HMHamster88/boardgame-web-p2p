@@ -1,4 +1,12 @@
+import _ from "lodash"
 import type { Comparable } from "../games/commonTypes/comparable"
+
+export function randomElement<T>(array: Array<T>): T | undefined {
+    if (array.length == 0) {
+        return undefined
+    }
+    return array[_.random(0, array.length - 1)]
+}
 
 export function findAndRemoveElement<T>(array: Array<T>, predicate: (value: T, index: number, obj: T[]) => unknown): boolean {
     const index = array.findIndex(predicate)

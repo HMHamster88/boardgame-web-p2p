@@ -2,7 +2,7 @@
 
     <div class="flex-auto mb-2">
         <CatanHexGrid v-if="gameState.field" :field="gameState.field" @road-overlay-click="roadOverlayClick"
-            :players="game.players" @intersection-overlay-click="intersectionOverlayClick"
+            :players="game.players" @intersection-overlay-click="intersectionOverlayClick" @hex-click="hexClick"
             :all-dice-value="allDiceValue"></CatanHexGrid>
     </div>
 
@@ -27,13 +27,15 @@
                 </li>
             </ul>
         </Popover>
-        <Button v-if="needToDiscardCards" :disabled="!discardCardsEnabled" v-on:click="discardCards">Discard
-            Cards</Button>
+        <Button v-if="needToDiscardCards" :disabled="!discardCardsEnabled" v-on:click="discardCards">{{
+            t('discardCards') }}</Button>
         <Button :disabled="!canEndTurn" v-on:click="endTurn()">{{ t('endTurn') }}</Button>
     </div>
     <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
         :resources="playerPrivateState.resources">
     </CatanResourceCards>
+
+    <SelectPlayersDialog ref="selectPlayesDialog"></SelectPlayersDialog>
 </template>
 
 <script setup lang="ts">
@@ -42,7 +44,7 @@ import Dice from '../../../components/Dice.vue';
 
 import { computed, type PropType, ref, useTemplateRef } from 'vue';
 import CatanHexGrid from './CatanHexGrid.vue';
-import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getVertexEdgesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
+import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getHexVerticesPositions, getVertexEdgesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
 import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
 import {
     buyItemToIntersectionObject,
@@ -57,15 +59,17 @@ import {
     type CatanPlayerPrivateState,
     type CatanPublicGameState,
     type CatanResourceCount,
-    type CatanRoad
+    type CatanRoad,
+    type CatanTerrainHex
 } from '../types/types';
-import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanDiscardResourceCards, CatanEmbarkAction, CatanEndTurnAction, CatanRollDicesAction } from "../types/actions";
+import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanDiscardResourceCards, CatanEmbarkAction, CatanEndTurnAction, CatanMoveRobberAction, CatanRollDicesAction } from "../types/actions";
 import type { GameAction } from '../../../services/messages';
 import type Game from '../../../db/game';
 import { rangeArray, removeElement } from '../../../utils/arrayUtils';
 import { resourcesImages } from './graphics';
 import { useI18n } from 'vue-i18n';
 import CatanResourceCards from './CatanResourceCards.vue';
+import SelectPlayersDialog from '../../../components/SelectPlayersDialog.vue';
 
 const { t } = useI18n({
     locale: 'en',
@@ -82,19 +86,28 @@ const { t } = useI18n({
             embark: 'Embark',
             status: {
                 localPlayer: {
+                    EMBARK_FIRST: 'Place first settlement and road',
+                    EMBARK_SECOND: 'Place second settlement and road',
                     THROWING_DICE: 'Throw dices',
-                    PLAYER_TURN: 'Your turn'
+                    PLAYER_TURN: 'Your turn',
+                    DISCARD_CARDS_7: '7 fell on dice, need to discard {count} cards',
+                    MOVE_ROBBER: 'Choose new place for robber'
                 },
                 notLocalPlayer: {
+                    EMBARK_FIRST: '{player} choosing embark place',
+                    EMBARK_SECOND: '{player} choosing embark place',
                     THROWING_DICE: '{player} throwing dices',
-                    PLAYER_TURN: '{player} turn'
+                    PLAYER_TURN: '{player} turn',
+                    DISCARD_CARDS_7: '7 fell on dice, players discarding cards',
+                    MOVE_ROBBER: '{player} choosing new place for robber'
                 }
             },
             build: {
                 ROAD: 'Choose place for road',
                 SETTLEMENT: 'Choose place for settlement',
                 CITY: 'Choose settlement for upgrade'
-            }
+            },
+            discardCards: 'Discard cards'
         },
         ru: {
             buy: 'Купить',
@@ -108,21 +121,28 @@ const { t } = useI18n({
             embark: 'Высадисться',
             status: {
                 localPlayer: {
+                    EMBARK_FIRST: 'Поставте первое поселение и дорогу',
+                    EMBARK_SECOND: 'Поставте второе поселение и дорогу',
                     THROWING_DICE: 'Ваш ход. Кидайте кубы',
                     PLAYER_TURN: 'Ваш ход',
-                    DISCARD_CARDS_7: 'Выпало 7 необходимо сбросить карты {count} шт'
+                    DISCARD_CARDS_7: 'Выпало 7 необходимо сбросить карты {count} шт',
+                    MOVE_ROBBER: 'Выберите новое место для разбойника'
                 },
                 notLocalPlayer: {
+                    EMBARK_FIRST: '{player} выбирает место посадки',
+                    EMBARK_SECOND: '{player} выбирает место посадки',
                     THROWING_DICE: '{player} кидает кубы',
                     PLAYER_TURN: '{player} ходит',
-                    DISCARD_CARDS_7: 'Выпало 7 игроки сбрасывают карты'
+                    DISCARD_CARDS_7: 'Выпало 7 игроки сбрасывают карты',
+                    MOVE_ROBBER: '{player} выбирает новое место для разбойника'
                 }
             },
             build: {
                 ROAD: 'Выберите место для дороги',
                 SETTLEMENT: 'Выберите место для поселения',
                 CITY: 'Выберите поселение для улучшения'
-            }
+            },
+            discardCards: 'Сбросить карты'
         }
     }
 })
@@ -139,6 +159,41 @@ const status = computed(() => {
     const playerPart = isLocalPlayerTurn.value ? 'localPlayer' : 'notLocalPlayer'
     return t(`status.${playerPart}.${phase}`, { player: props.game.players[props.gameState.activePlayerIndex]?.name })
 })
+
+const selectPlayesDialog = useTemplateRef('selectPlayesDialog')
+
+async function hexClick(hex: CatanTerrainHex) {
+    if (props.gameState && props.gameState.phase == CatanGamePhase.MOVE_ROBBER && isLocalPlayerTurn.value) {
+        if (!Vector2D.equals(hex.position, props.gameState.field.robberPos)) {
+            const intersects = findByCoords(getHexVerticesPositions(hex.position), intersectsByCoords.value)
+            const players = intersects.flatMap(int => int.intersectionObjects)
+                .filter(obj => obj.type == CatanIntersectionObjectType.SETTLEMENT ||
+                    obj.type == CatanIntersectionObjectType.CITY)
+                .map(obj => obj.playerId)
+                .filter(playerId => playerId != localPlayer.value.userId)
+                .map(playerId => props.game.players.find(pl => pl.userId == playerId)!)
+
+            let selectedPlayerId: string | undefined
+            if (players.length == 0) {
+                selectedPlayerId = undefined
+            } else if (players.length == 1) {
+                selectedPlayerId = players[0]?.userId
+            } else {
+                const dialogSelectedPlayers = await selectPlayesDialog.value?.open([players[0]!, localPlayer.value], false)
+                if (dialogSelectedPlayers?.length) {
+                    selectedPlayerId = dialogSelectedPlayers[0]?.userId
+                } else {
+                    return
+                }
+            }
+            performAction<CatanMoveRobberAction>({
+                type: 'CatanMoveRobberAction',
+                position: hex.position,
+                playerToRob: selectedPlayerId
+            })
+        }
+    }
+}
 
 const selectedResorceCards = ref<CatanResourceCount[]>([])
 

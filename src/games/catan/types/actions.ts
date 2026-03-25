@@ -37,3 +37,9 @@ export interface CatanDiscardResourceCards extends GameAction {
     resources: CatanResourceCount[]
 }
 
+export interface CatanMoveRobberAction extends GameAction {
+    type: 'CatanMoveRobberAction',
+    position: Vector2DLike,
+    playerToRob: string | undefined
+}
+

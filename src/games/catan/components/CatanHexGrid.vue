@@ -11,8 +11,9 @@
         </polygon>
         <g id="trrain">
             <CatanTerrainHexComponent v-for="terrainHex in field.hexes" :data="terrainHex" :size="hexSize"
-                :allDiceValue="allDiceValue">
+                :allDiceValue="allDiceValue" @click="hexClick">
             </CatanTerrainHexComponent>
+            <image :href="robberImage" :transform="robberTransform" :width="robberSize"></image>
         </g>
 
         <g id="harbours">
@@ -68,10 +69,24 @@ import CatanTerrainHexComponent from './CatanTerrainHexComponent.vue';
 import CatanHarbourComponent from './CatanHarbourComponent.vue';
 import CatanVertexOverlay from './CatanVertexOverlay.vue';
 import CatanEdgeOverlay from './CatanEdgeOverlay.vue';
-import type { CatanField, CatanHarbour } from '../types/types.ts';
+import type { CatanField, CatanHarbour, CatanTerrainHex } from '../types/types.ts';
 import type { Player } from '../../../db/player.ts';
 import { Vector2D } from '../../commonTypes/vector2d.ts';
 import { distinct, type HexGridData } from '../../commonTypes/hex-grid/hexData.ts';
+import robberImage from '../assets/robber.png'
+
+const robberSize = computed(() => {
+    return props.hexSize / 1.5
+})
+
+const robberPos = computed(() => {
+    return pointyHexToPixel(props.field.robberPos, props.hexSize).multiplied(1 / 6)
+        .added(new Vector2D(-robberSize.value / 2.2, -robberSize.value / 1.3))
+})
+
+const robberTransform = computed(() => {
+    return `translate(${robberPos.value.x}, ${robberPos.value.y})`
+})
 
 const backgroundHexString = computed(() => {
     if (!hexGridData.value.hexes.length) {
@@ -90,6 +105,10 @@ function outEdgeRotation(data: CatanHarbour) {
         return 0;
     }
     return (pointyHexToPixel(data.position, props.hexSize).x < pointyHexToPixel(hexes[0]!.position, props.hexSize).x) ? 180 : 0
+}
+
+function hexClick(hex: CatanTerrainHex) {
+    emit('hexClick', hex)
 }
 
 function roadOverlayClick(road: Vector2D) {
@@ -163,6 +182,9 @@ const emit = defineEmits({
         return true
     },
     roadOverlayClick(_position: Vector2D) {
+        return true
+    },
+    hexClick(_hex: CatanTerrainHex) {
         return true
     }
 })

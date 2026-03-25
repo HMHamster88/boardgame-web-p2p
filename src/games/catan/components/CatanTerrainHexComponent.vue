@@ -1,6 +1,6 @@
 <template>
     <g :transform="transform" @click="emit('click', data)">
-        <polygon :points="hexagonString(size)" :fill="`url(#${data.type})`">
+        <polygon :points="hexagonString(size)" :fill="`url(#${data.type})`" class="hex">
         </polygon>
         <text v-if="data.circularNumber" :class="curcularTextClass">
             {{ data.circularNumber }}
@@ -65,7 +65,9 @@ const emit = defineEmits({
     stroke-linejoin: miter;
 }
 
-.highlight {
-    fill: rgb(140, 255, 0);
+.hex {}
+
+.hex:hover {
+    filter: hue-rotate(45deg);
 }
 </style>

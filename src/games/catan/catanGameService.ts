@@ -26,10 +26,10 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction } from "./types/actions";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction } from "./types/actions";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
-import { getShuffledArray, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
+import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
 import { Vector2D } from '../commonTypes/vector2d';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import _ from 'lodash';
@@ -244,6 +244,9 @@ export class CatanGameService implements GameService {
                 const playersUpdateId: string[] = []
 
                 for (let hex of hexes) {
+                    if (Vector2D.equals(hex.position, field.robberPos)) {
+                        continue
+                    }
                     const intObjects = findByCoordsArray(getHexVerticesPositions(hex.position), field.intersections)
                         .flatMap(int => int.intersectionObjects)
                     intObjects.forEach(intObject => {
@@ -347,9 +350,31 @@ export class CatanGameService implements GameService {
                 privatePlayerState.discardCardsCount = 0
                 playerPrivateStateSync.get(playerId)?.sendUpdateTS(['resources', 'discardCardsCount'])
                 if (privateState.playersStates.every(ps => ps.discardCardsCount == 0)) {
-                    publicState.phase == CatanGamePhase.MOVE_ROBBER
+                    publicState.phase = CatanGamePhase.MOVE_ROBBER
                     gamePublicStateSync.sendUpdateTS('phase')
                 }
+            },
+            onCatanMoveRobberAction: (action: CatanMoveRobberAction) => {
+                field.robberPos = action.position
+
+
+                if (action.playerToRob) {
+                    const playerToRob = privateState.playersStates.find(ps => ps.playerId == action.playerToRob)!
+                    if (this.allResourcesCount(playerToRob?.resources) > 0) {
+                        const resCount = randomElement(playerToRob.resources)!
+                        const resourceRob: CatanResourceCount = {
+                            type: resCount.type,
+                            count: 1
+                        }
+                        this.removeResources(playerToRob, [resourceRob])
+                        this.addResources(privatePlayerState, [resourceRob])
+                        playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                        playerPrivateStateSync.get(playerToRob.playerId)?.sendUpdateTS('resources')
+                    }
+                }
+
+                publicState.phase = CatanGamePhase.PLAYER_TURN
+                gamePublicStateSync.sendUpdate(['field.robberPos', 'phase'])
             }
         }, gameAction)
 
@@ -485,6 +510,7 @@ export class CatanGameService implements GameService {
             harbours: harbours,
             roads: [],
             intersections: [],
+            robberPos: hexes.find(hex => hex.type == CatanTerrainHexType.DESERT)?.position!
         }
     }
 
