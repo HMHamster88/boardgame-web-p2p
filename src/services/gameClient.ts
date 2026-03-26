@@ -1,21 +1,22 @@
 import {
-    type StartGameMessage,
-    type GameMessage,
-    type JoinGameMessage,
     type ErorrGameMessage,
     type GameAction,
     type GameActionMessage,
+    type GameMessage,
     getGamePeerId,
-    type KickPlayerMessage
+    type JoinGameMessage,
+    type KickPlayerMessage,
+    type NotifyGameMessage,
+    type StartGameMessage
 } from "./messages";
 
-import EventEmitter from "eventemitter3"
+import EventEmitter from "eventemitter3";
 
-import type { Player } from "../db/player";
-import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
-import { ObjectSync } from "../p2p/objectSync";
 import type Game from "../db/game";
 import type { GamePublicState, PlayerPrivateState } from "../db/gameState";
+import type { Player } from "../db/player";
+import { ObjectSync } from "../p2p/objectSync";
+import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 
 export enum ConnectStatus {
     CONNECTING,
@@ -28,6 +29,7 @@ interface GameClientEvents {
 
     JoinGameMessage: (message: JoinGameMessage) => void
     ErorrGameMessage: (message: ErorrGameMessage) => void
+    NotifyGameMessage: (messge: NotifyGameMessage) => void
 
     gameReceive: (game: Game) => Game
 }

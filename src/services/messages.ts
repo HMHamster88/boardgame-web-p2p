@@ -10,6 +10,12 @@ export interface GameInfoMessage {
     game: Game
 }
 
+export interface NotifyGameMessage extends GameMessage {
+    type: 'NotifyGameMessage',
+    message: string,
+    messageParams?: any
+}
+
 export interface ErorrGameMessage extends GameMessage {
     type: 'ErorrGameMessage',
     message: string,

@@ -1,14 +1,15 @@
+import { v4 as uuidv4 } from 'uuid';
 import type { Component } from "vue";
-import { v4 as uuidv4 } from 'uuid'
 
-import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type Game from "../../db/game";
-import type { GameObjectSyncs, GameService } from "../../services/gameService/gameService";
-import TickTacToeSettings from "./components/TickTacToeSettings.vue"
-import TickTacToeGameView from "./components/TickTacToeGameView.vue"
-import { TicTacToeGameStateFieldEnum, type TicTacToeGameSettings, type TicTacToeGamePublicState, type TicTacToeSetCellAction } from "./types";
+import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type { GameState } from "../../db/gameState";
+import type GameHost from "../../services/gameHost";
+import type { GameService } from "../../services/gameService/gameService";
 import { inti2DArray } from "../../utils/arrayUtils";
+import TickTacToeGameView from "./components/TickTacToeGameView.vue";
+import TickTacToeSettings from "./components/TickTacToeSettings.vue";
+import { TicTacToeGameStateFieldEnum, type TicTacToeGamePublicState, type TicTacToeGameSettings, type TicTacToeSetCellAction } from "./types";
 
 export function getService(): GameService {
     return new TicTacToeGameService()
@@ -67,7 +68,7 @@ export class TicTacToeGameService implements GameService {
         return gameState
     }
 
-    async performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string, syncs: GameObjectSyncs): Promise<void> {
+    async performAction(game: Game, gameState: GameState, gameAction: TicTacToeSetCellAction, _playerId: string, host: GameHost): Promise<void> {
         if (game.status != GameStatusEnum.STARTED) {
             return
         }
@@ -79,9 +80,9 @@ export class TicTacToeGameService implements GameService {
         if (gameResult != TicTacToeGameStateFieldEnum.NONE) {
             gameState.publicState.winnersIds = gameResult == TicTacToeGameStateFieldEnum.CROSS ? [game.players[0]?.userId!] : [game.players[1]?.userId!]
             game.status = GameStatusEnum.FINISHED
-            syncs.gameSync?.sendUpdate('status')
+            host.gameSync?.sendUpdate('status')
         }
-        syncs.gamePublicStateSync?.sendUpdate()
+        host.gamePublicStateSync?.sendUpdate()
     }
 
     checkgameFinished(gameState: GameState): TicTacToeGameStateFieldEnum {

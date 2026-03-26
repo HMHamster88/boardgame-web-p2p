@@ -1,18 +1,18 @@
+import _, { random } from "lodash";
+import { v4 as uuidv4 } from 'uuid';
 import type { Component } from "vue";
-import { v4 as uuidv4 } from 'uuid'
-import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type Game from "../../db/game";
+import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type { GameState } from "../../db/gameState";
-import type { GameObjectSyncs, GameService } from "../../services/gameService/gameService";
+import type GameHost from "../../services/gameHost";
+import type { GameService } from "../../services/gameService/gameService";
 import type { GameAction } from "../../services/messages";
-import CahSettings from "./components/CahSettings.vue";
-import CahGameView from "./components/CahGameView.vue";
-import { CahGamePhase, cahPlayerCardsCount, type CahGamePrivateState, type CahGamePublicState, type CahGameSettings, type CahPrivatePlayerState, type CahPublicPlayerState, type CahSelectAnswerAction, type CahSendAnswersAction } from "./cahTypes";
-import questions from "./texts/questions";
-import answers from "./texts/answers";
-import { random } from "lodash";
 import { getShuffledArray } from "../../utils/arrayUtils";
-import _ from "lodash";
+import { CahGamePhase, cahPlayerCardsCount, type CahGamePrivateState, type CahGamePublicState, type CahGameSettings, type CahPrivatePlayerState, type CahPublicPlayerState, type CahSelectAnswerAction, type CahSendAnswersAction } from "./cahTypes";
+import CahGameView from "./components/CahGameView.vue";
+import CahSettings from "./components/CahSettings.vue";
+import answers from "./texts/answers";
+import questions from "./texts/questions";
 
 export function getService(): GameService {
     return new CahService()
@@ -94,7 +94,7 @@ export class CahService implements GameService {
         return gameState
     }
 
-    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): Promise<void> {
+    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, host: GameHost): Promise<void> {
         const publicState = gameState.publicState as CahGamePublicState
         const privateState = gameState.privateState as CahGamePrivateState
         const activePlayerId = game.players[gameState.publicState.activePlayerIndex]?.userId
@@ -125,8 +125,8 @@ export class CahService implements GameService {
                     publicState.playersSlectedAswers = getShuffledArray(publicState.playersSlectedAswers)
                     publicState.phase = CahGamePhase.ACTIVE_PLAYER_CHOOSE_ANSWERS
                 }
-                syncs.gamePublicStateSync?.sendUpdate()
-                syncs.playerPrivateStateSync.get(playerId)?.sendUpdate('onHandAswersIds')
+                host.gamePublicStateSync?.sendUpdate()
+                host.playerPrivateStateSync.get(playerId)?.sendUpdate('onHandAswersIds')
             },
             onCahSelectAnswerAction: (action: CahSelectAnswerAction) => {
                 if (publicState.phase != CahGamePhase.ACTIVE_PLAYER_CHOOSE_ANSWERS) {
@@ -143,7 +143,7 @@ export class CahService implements GameService {
                 if (player.points! >= settings.pointsToWin) {
                     publicState.winnersIds = [player.playerId]
                     game.status = GameStatusEnum.FINISHED
-                    syncs.gameSync?.sendUpdate()
+                    host.gameSync?.sendUpdate()
                 }
 
                 publicState.playersSlectedAswers.forEach(pa => {
@@ -167,8 +167,8 @@ export class CahService implements GameService {
                 publicState.phase = CahGamePhase.PLAYERS_CHOOSE_ANSWERS
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
 
-                syncs.gamePublicStateSync?.sendUpdate()
-                syncs.playerPrivateStateSync.forEach((playerSync, peerId) => playerSync.sendUpdate(null, peerId))
+                host.gamePublicStateSync?.sendUpdate()
+                host.playerPrivateStateSync.forEach((playerSync, peerId) => playerSync.sendUpdate(null, peerId))
             }
         }
 

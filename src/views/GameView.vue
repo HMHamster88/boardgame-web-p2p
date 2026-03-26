@@ -68,27 +68,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
 
-import emitter from '../utils/eventBus'
-import { useLocalStore } from '../services/localStore'
 import type Game from '../db/game';
+import { useLocalStore } from '../services/localStore';
+import emitter from '../utils/eventBus';
 
+import { merge } from 'lodash';
+import { useI18n } from 'vue-i18n';
+import EditGameJsonDialog from '../components/EditGameJsonDialog.vue';
 import { GameStatusEnum } from '../db/game';
-import type { PlayerPrivateState, GamePublicState } from '../db/gameState';
+import type { GamePublicState, PlayerPrivateState } from '../db/gameState';
 import type { Player } from '../db/player';
 import GameClient, { ConnectStatus } from '../services/gameClient';
 import GameHost from '../services/gameHost';
-import getGameSerivce from '../services/gameService/gameServiceSelector';
 import type { GameService } from '../services/gameService/gameService';
+import getGameSerivce from '../services/gameService/gameServiceSelector';
 import type { GameAction } from '../services/messages';
-import { useI18n } from 'vue-i18n';
 import { soundService } from '../services/soundService';
-import EditGameJsonDialog from '../components/EditGameJsonDialog.vue';
 
-const { t } = useI18n({
+const { messages, t } = useI18n({
     locale: 'en',
     messages: {
         en: {
@@ -304,6 +305,10 @@ onMounted(async () => {
         emitter.emit('toastMessage', { severity: 'error', summary: t(message.message, message.messageParams), life: 3000 })
     })
 
+    gameClient.on("NotifyGameMessage", (message) => {
+        emitter.emit('toastMessage', { severity: 'info', summary: t(message.message, message.messageParams), life: 3000 })
+    })
+
     gameClient.on("JoinGameMessage", (message) => {
         console.log("JoinGameMessage")
         game.value.players.push(message.player)
@@ -312,6 +317,7 @@ onMounted(async () => {
     gameClient.gameObjectSync.valueSetter = (value) => {
         game.value = value
         gameService = getGameSerivce(game.value.type)
+        merge(messages.value, gameService.localization)
         watch(game.value.settings, () => {
             if (!gameClient.gameObjectSync.updateReceived) {
                 gameClient.gameObjectSync.sendUpdate('settings')

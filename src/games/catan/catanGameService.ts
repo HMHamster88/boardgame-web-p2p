@@ -1,12 +1,22 @@
-import { v4 as uuidv4 } from 'uuid'
+import _ from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
 import type { Component } from "vue";
-import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type Game from "../../db/game";
+import { GameStatusEnum, type CrateGameProps } from "../../db/game";
 import type { GameState } from "../../db/gameState";
-import type { GameObjectSyncs, GameService } from "../../services/gameService/gameService";
+import type { ObjectSync } from '../../p2p/objectSync';
+import type GameHost from '../../services/gameHost';
+import type { GameService } from "../../services/gameService/gameService";
 import { handleMessage, type GameAction } from "../../services/messages";
-import CatanSettings from "./components/CatanSettings.vue";
+import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
+import { sleep } from '../../utils/functionUtils';
+import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
+import { Vector2D } from '../commonTypes/vector2d';
 import CatanGameView from "./components/CatanGameView.vue";
+import CatanSettings from "./components/CatanSettings.vue";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction } from "./types/actions";
+import { CatanGameFieldType } from "./types/catanGameFieldType";
+import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import {
     CatanBuyItemType,
     CatanDiceValue,
@@ -27,15 +37,6 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction } from "./types/actions";
-import { CatanTerrainHexType } from "./types/catanTerrainHexType";
-import { CatanGameFieldType } from "./types/catanGameFieldType";
-import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
-import { Vector2D } from '../commonTypes/vector2d';
-import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
-import _ from 'lodash';
-import { sleep } from '../../utils/functionUtils';
-import type { ObjectSync } from '../../p2p/objectSync';
 import { checkDeal, getAllResourcesCount, getPlayerPrices } from './types/utils';
 
 const embarkRoadsCount = 2
@@ -47,10 +48,14 @@ export function getService(): GameService {
 export class CatanGameService implements GameService {
     localization: any = {
         en: {
-            CATAN: 'Catan'
+            CATAN: 'Catan',
+            playerAcceptedDeal: "{player} accepted deal",
+            playersRejectedDeal: "All players rejected deal"
         },
         ru: {
-            CATAN: 'Колонизаторы'
+            CATAN: 'Колонизаторы',
+            playerAcceptedDeal: "{player} принял сделку",
+            playersRejectedDeal: "Все игроки отклонили сделку"
         }
     }
     gameType: string = 'CATAN'
@@ -123,13 +128,13 @@ export class CatanGameService implements GameService {
         return gameState
     }
 
-    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, syncs: GameObjectSyncs): Promise<void> {
+    async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, host: GameHost): Promise<void> {
         const settings = game.settings as CatanGameSettings
 
         const isSettingsAction = await handleMessage({
             onCatanGenerateFieldAction: () => {
                 settings.field = this.generateField(settings.fieldType)
-                syncs.gameSync?.sendUpdateTS('settings')
+                host.gameSync?.sendUpdateTS('settings')
             }
         }, gameAction)
 
@@ -145,8 +150,8 @@ export class CatanGameService implements GameService {
         const privatePlayerState = privateState.playersStates.find(pl => pl.playerId == playerId)!
         const activePlayerPrivteState = privateState.playersStates[publicState.activePlayerIndex]
         const isActivePlayerAction = playerId == activePlayerId
-        const gamePublicStateSync = syncs.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
-        const playerPrivateStateSync = syncs.playerPrivateStateSync as any as Map<string, ObjectSync<CatanPlayerPrivateState>>
+        const gamePublicStateSync = host.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
+        const playerPrivateStateSync = host.playerPrivateStateSync as any as Map<string, ObjectSync<CatanPlayerPrivateState>>
 
         await handleMessage({
             onCatanEmbarkAction: (action: CatanEmbarkAction) => {
@@ -418,9 +423,11 @@ export class CatanGameService implements GameService {
                     playerPrivateStateSync.get(tradeOffer.playerId)?.sendUpdateTS('resources')
                     playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
                     publicState.playerTradeOffer = undefined
+                    host.sendNotify(tradeOffer.playerId, 'playerAcceptedDeal', { player: game.players.find(pl => pl.userId == playerId)?.name })
                 } else {
                     tradeOffer.rejectedPlayerIds.push(playerId)
                     if (tradeOffer.rejectedPlayerIds.length >= game.players.length - 1) {
+                        host.sendNotify(tradeOffer.playerId, 'playersRejectedDeal', undefined)
                         publicState.playerTradeOffer = undefined
                     }
                 }

@@ -7,7 +7,7 @@ import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import { removeElement } from "../utils/arrayUtils";
 import type { GameService } from "./gameService/gameService";
 import getGameSerivce from "./gameService/gameServiceSelector";
-import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type KickPlayerMessage, type StartGameMessage } from "./messages";
+import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type KickPlayerMessage, type NotifyGameMessage, type StartGameMessage } from "./messages";
 
 export default class GameHost {
     gameId: string
@@ -101,12 +101,7 @@ export default class GameHost {
                     this.gamePublicStateSync.updateSended = false
                 }
                 this.playerPrivateStateSync.forEach(sync => sync.updateSended = false)
-                await this.gameService.performAction(this.game, this.gameState, message.action, peerId,
-                    {
-                        gameSync: this.gameSync,
-                        gamePublicStateSync: this.gamePublicStateSync,
-                        playerPrivateStateSync: this.playerPrivateStateSync
-                    })
+                await this.gameService.performAction(this.game, this.gameState, message.action, peerId, this)
 
                 if (this.gameSync.updateSended) {
                     db.updateGame(this.game)
@@ -225,6 +220,19 @@ export default class GameHost {
 
     getPlayerById(userId: string) {
         return this.game.players.find(player => player.userId == userId)
+    }
+
+    sendNotify(peerId: string | undefined, message: string, messageParams: any | undefined) {
+        const notifyMessage: NotifyGameMessage = {
+            type: 'NotifyGameMessage',
+            message: message,
+            messageParams: messageParams
+        }
+        if (peerId) {
+            this.send<NotifyGameMessage>(peerId, notifyMessage)
+        } else {
+            this.sendToAll<NotifyGameMessage>(notifyMessage)
+        }
     }
 
     send<T extends GameMessage>(peerId: string, message: T) {
