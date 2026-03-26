@@ -108,14 +108,17 @@ function outEdgeRotation(data: CatanHarbour) {
 }
 
 function hexClick(hex: CatanTerrainHex) {
+    console.debug(`Hex pos ${hex.position}`)
     emit('hexClick', hex)
 }
 
 function roadOverlayClick(road: Vector2D) {
+    console.debug(`Road pos ${road}`)
     emit('roadOverlayClick', road)
 }
 
 function intersectionOverlayClick(position: Vector2D) {
+    console.debug(`Intersect  pos ${position}`)
     emit('intersectionOverlayClick', position)
 }
 

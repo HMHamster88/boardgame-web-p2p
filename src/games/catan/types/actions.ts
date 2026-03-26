@@ -1,6 +1,6 @@
 import type { GameAction } from "../../../services/messages";
 import type { Vector2DLike } from "../../commonTypes/vector2d";
-import type { CatanIntersectionObjectType, CatanResourceCount } from "./types";
+import type { CatanIntersectionObjectType, CatanResourceCount, CatanTradeDeal } from "./types";
 
 
 export interface CatanGenerateFieldAction extends GameAction {
@@ -41,5 +41,15 @@ export interface CatanMoveRobberAction extends GameAction {
     type: 'CatanMoveRobberAction',
     position: Vector2DLike,
     playerToRob: string | undefined
+}
+
+export interface CatanTradeAction extends GameAction {
+    type: 'CatanTradeAction'
+    deal: CatanTradeDeal
+}
+
+export interface CatanTradeResponseAction extends GameAction {
+    type: 'CatanTradeResponseAction'
+    accepted: boolean
 }
 

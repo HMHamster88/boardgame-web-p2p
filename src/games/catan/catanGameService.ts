@@ -12,6 +12,7 @@ import {
     CatanDiceValue,
     CatanGamePhase,
     CatanIntersectionObjectType,
+    CatanTradeType,
     getBuyItems,
     intersectionObjectRoBuyItem,
     type CatanField,
@@ -26,7 +27,7 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction } from "./types/actions";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction } from "./types/actions";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
@@ -35,6 +36,7 @@ import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions,
 import _ from 'lodash';
 import { sleep } from '../../utils/functionUtils';
 import type { ObjectSync } from '../../p2p/objectSync';
+import { checkDeal, getAllResourcesCount, getPlayerPrices } from './types/utils';
 
 const embarkRoadsCount = 2
 
@@ -95,7 +97,8 @@ export class CatanGameService implements GameService {
             dices: {
                 redDice: CatanDiceValue.ONE,
                 yellowDice: CatanDiceValue.ONE
-            }
+            },
+            playerTradeOffer: undefined
         }
         const privatePlayerStates = game.players.map(player => {
             const state: CatanPlayerPrivateState = {
@@ -220,7 +223,7 @@ export class CatanGameService implements GameService {
                 if (allDiceValue == 7) {
                     let anyoneHasResourceExcess = false
                     for (let player of privateState.playersStates) {
-                        const allResourcesCount = this.allResourcesCount(player.resources)
+                        const allResourcesCount = getAllResourcesCount(player.resources)
                         const maxPlayerResources = this.maxPlayerResources(player)
 
                         if (allResourcesCount > maxPlayerResources) {
@@ -341,17 +344,17 @@ export class CatanGameService implements GameService {
                 gamePublicStateSync.sendUpdateTS(['activePlayerIndex', 'phase'])
             },
             onCatanDiscardResourceCards: (action: CatanDiscardResourceCards) => {
-                if (privatePlayerState.discardCardsCount != this.allResourcesCount(action.resources)) {
-                    console.debug('Invalid card discard count')
-                    return
+                if (privatePlayerState.discardCardsCount != getAllResourcesCount(action.resources)) {
+                    console.debug('Invalid card discard count');
+                    return;
                 }
 
-                this.removeResources(privatePlayerState, action.resources)
-                privatePlayerState.discardCardsCount = 0
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS(['resources', 'discardCardsCount'])
+                this.removeResources(privatePlayerState, action.resources);
+                privatePlayerState.discardCardsCount = 0;
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS(['resources', 'discardCardsCount']);
                 if (privateState.playersStates.every(ps => ps.discardCardsCount == 0)) {
-                    publicState.phase = CatanGamePhase.MOVE_ROBBER
-                    gamePublicStateSync.sendUpdateTS('phase')
+                    publicState.phase = CatanGamePhase.MOVE_ROBBER;
+                    gamePublicStateSync.sendUpdateTS('phase');
                 }
             },
             onCatanMoveRobberAction: (action: CatanMoveRobberAction) => {
@@ -360,7 +363,7 @@ export class CatanGameService implements GameService {
 
                 if (action.playerToRob) {
                     const playerToRob = privateState.playersStates.find(ps => ps.playerId == action.playerToRob)!
-                    if (this.allResourcesCount(playerToRob?.resources) > 0) {
+                    if (getAllResourcesCount(playerToRob?.resources) > 0) {
                         const resCount = randomElement(playerToRob.resources)!
                         const resourceRob: CatanResourceCount = {
                             type: resCount.type,
@@ -375,13 +378,56 @@ export class CatanGameService implements GameService {
 
                 publicState.phase = CatanGamePhase.PLAYER_TURN
                 gamePublicStateSync.sendUpdate(['field.robberPos', 'phase'])
+            },
+            onCatanTradeAction: (action: CatanTradeAction) => {
+                if (playerId != activePlayerId) {
+                    return
+                }
+                const deal = action.deal
+                if (!checkDeal(deal, getPlayerPrices(field, playerId), privatePlayerState.resources)) {
+                    console.debug('Invalid deal')
+                    return
+                }
+                if (deal.type == CatanTradeType.BANK) {
+                    this.removeResources(privatePlayerState, deal.offered)
+                    this.addResources(privatePlayerState, deal.required)
+                    playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                } else {
+                    publicState.playerTradeOffer = {
+                        playerId: playerId,
+                        offered: deal.offered,
+                        required: deal.required,
+                        rejectedPlayerIds: []
+                    }
+                    gamePublicStateSync.sendUpdateTS('playerTradeOffer')
+                }
+            },
+            onCatanTradeResponseAction: (action: CatanTradeResponseAction) => {
+                const tradeOffer = publicState.playerTradeOffer
+                if (!tradeOffer) {
+                    console.debug('No active offer')
+                    return
+                }
+                if (action.accepted) {
+                    const tradePlayerState = privateState.playersStates.find(ps => ps.playerId == tradeOffer.playerId)!
+                    this.removeResources(privatePlayerState, tradeOffer.required)
+                    this.addResources(privatePlayerState, tradeOffer.offered)
+
+                    this.removeResources(tradePlayerState, tradeOffer.offered)
+                    this.addResources(tradePlayerState, tradeOffer.required)
+                    playerPrivateStateSync.get(tradeOffer.playerId)?.sendUpdateTS('resources')
+                    playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                    publicState.playerTradeOffer = undefined
+                } else {
+                    tradeOffer.rejectedPlayerIds.push(playerId)
+                    if (tradeOffer.rejectedPlayerIds.length >= game.players.length - 1) {
+                        publicState.playerTradeOffer = undefined
+                    }
+                }
+                gamePublicStateSync.sendUpdateTS('playerTradeOffer')
             }
         }, gameAction)
 
-    }
-
-    allResourcesCount(resources: CatanResourceCount[]) {
-        return resources.map(resource => resource.count).reduce((a, c) => a + c, 0)
     }
 
     maxPlayerResources(_playerState: CatanPlayerPrivateState) {

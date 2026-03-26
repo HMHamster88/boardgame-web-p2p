@@ -57,8 +57,8 @@ export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents>
                     if (!part.path && this.valueSetter) {
                         this.value = this.valueSetter(part.value)
                     } else if (this.value && part.path) {
-                        if (_.isObject(part.value) && !_.isArray(part.value)) {
-                            const oldVal = _.get(this.value, part.path)
+                        const oldVal = _.get(this.value, part.path)
+                        if (_.isObject(part.value) && !_.isArray(part.value) && oldVal) {
                             Object.assign(oldVal, part.value)
                         } else {
                             _.set(this.value, part.path, part.value)

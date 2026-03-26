@@ -33,6 +33,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
+    SelectButton: typeof import('primevue/selectbutton')['default']
     SelectPlayersDialog: typeof import('./src/components/SelectPlayersDialog.vue')['default']
     Slider: typeof import('primevue/slider')['default']
     Textarea: typeof import('primevue/textarea')['default']

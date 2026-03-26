@@ -18,6 +18,14 @@ export const catanEmbarkPhases: readonly CatanGamePhase[] = [
     CatanGamePhase.EMBARK_SECOND
 ]
 
+export enum CatanResourceType {
+    WOOD = "WOOD",
+    WOOL = "WOOL",
+    GRAIN = "GRAIN",
+    CLAY = "CLAY",
+    ORE = "ORE"
+}
+
 export enum CatanHarbourType {
     THREE_TO_ONE = "THREE_TO_ONE",
     CLAY = "CLAY",
@@ -27,13 +35,16 @@ export enum CatanHarbourType {
     WOOD = "WOOD",
 }
 
-export enum CatanResourceType {
-    WOOD = "WOOD",
-    WOOL = "WOOL",
-    GRAIN = "GRAIN",
-    CLAY = "CLAY",
-    ORE = "ORE"
+export const catanHarbourResourceType: Record<CatanHarbourType, CatanResourceType | undefined> = {
+    [CatanHarbourType.THREE_TO_ONE]: undefined,
+    [CatanHarbourType.CLAY]: CatanResourceType.CLAY,
+    [CatanHarbourType.ORE]: CatanResourceType.ORE,
+    [CatanHarbourType.GRAIN]: CatanResourceType.GRAIN,
+    [CatanHarbourType.WOOL]: CatanResourceType.WOOL,
+    [CatanHarbourType.WOOD]: CatanResourceType.WOOD,
 }
+
+
 
 export interface CatanTerrainHex {
     position: Vector2DLike
@@ -100,16 +111,40 @@ export interface CatanDices {
     yellowDice: CatanDiceValue
 }
 
+export interface CatanPlayerTradeOffer {
+    playerId: string,
+    offered: CatanResourceCount[]
+    required: CatanResourceCount[],
+    rejectedPlayerIds: string[]
+}
+
 export interface CatanPublicGameState extends GamePublicState {
     field: CatanField
     phase: CatanGamePhase
     playersStates: CatanPlayerPublicState[]
-    dices: CatanDices
+    dices: CatanDices,
+    playerTradeOffer: CatanPlayerTradeOffer | undefined
 }
 
 export interface CatanResourceCount {
     type: CatanResourceType,
     count: number
+}
+
+export interface CatanResourcePrice {
+    type: CatanResourceType,
+    price: number
+}
+
+export enum CatanTradeType {
+    BANK = "BANK",
+    PLAYER = "PLAYER"
+}
+
+export interface CatanTradeDeal {
+    type: CatanTradeType
+    offered: CatanResourceCount[]
+    required: CatanResourceCount[]
 }
 
 export interface CatanPlayerPrivateState extends PlayerPrivateState {

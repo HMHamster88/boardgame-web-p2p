@@ -1,6 +1,14 @@
 import _ from "lodash"
 import type { Comparable } from "../games/commonTypes/comparable"
 
+export interface Typed<T> {
+    type: T
+}
+
+export function getByType<K, T extends Typed<K>>(array: Array<T>, type: K): T | undefined {
+    return array.find(el => el.type == type)
+}
+
 export function randomElement<T>(array: Array<T>): T | undefined {
     if (array.length == 0) {
         return undefined

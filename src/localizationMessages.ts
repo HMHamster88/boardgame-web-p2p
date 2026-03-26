@@ -8,7 +8,10 @@ export const localizationMessages = {
         minimalPlayerCount: 'Minimal players count: {playersCount}',
         maxPlayerCount: 'Maximum players count: {playersCount}',
         fieldSize: 'Field size',
-        notGameOwner: 'You are not owner of this game'
+        notGameOwner: 'You are not owner of this game',
+        resourceExchange: 'Resource Exchange',
+        accept: 'Accept',
+        reject: 'Reject'
     },
     ru: {
         ok: 'OK',
@@ -19,6 +22,9 @@ export const localizationMessages = {
         minimalPlayerCount: 'Минимальное количество игроков: {playersCount}',
         maxPlayerCount: 'Максимальное количество игроков: {playersCount}',
         fieldSize: 'Размер поля',
-        notGameOwner: 'Вы не владелец этой игры'
+        notGameOwner: 'Вы не владелец этой игры',
+        resourceExchange: 'Обмен ресурсов',
+        accept: 'Принять',
+        reject: 'Отклонить'
     }
 }

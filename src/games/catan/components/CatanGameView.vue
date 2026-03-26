@@ -14,7 +14,7 @@
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
         <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
-        }}</Button>
+            }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
@@ -29,6 +29,7 @@
         </Popover>
         <Button v-if="needToDiscardCards" :disabled="!discardCardsEnabled" v-on:click="discardCards">{{
             t('discardCards') }}</Button>
+        <Button @click="trade" :disabled="!canTrade">{{ t('resourceExchange') }}</Button>
         <Button :disabled="!canEndTurn" v-on:click="endTurn()">{{ t('endTurn') }}</Button>
     </div>
     <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
@@ -36,16 +37,46 @@
     </CatanResourceCards>
 
     <SelectPlayersDialog ref="selectPlayesDialog"></SelectPlayersDialog>
+    <CatanTradeDialog ref="tradeDialog"></CatanTradeDialog>
+    <PlayerTradeOfferDialog :available-resources="playerPrivateState.resources" :players="game.players"
+        :player-trade-offer="gameState.playerTradeOffer" :local-player-id="localPlayer.userId"
+        @result="playerTradeOfferResult">
+    </PlayerTradeOfferDialog>
+    <TradeOfferAnswerDialog :players="game.players" :player-trade-offer="gameState.playerTradeOffer"
+        :local-player-id="localPlayer.userId"></TradeOfferAnswerDialog>
 </template>
 
 <script setup lang="ts">
 
 import Dice from '../../../components/Dice.vue';
 
-import { computed, type PropType, ref, useTemplateRef } from 'vue';
-import CatanHexGrid from './CatanHexGrid.vue';
-import { findByCoords, getEdgeNeighborhoodsPositions, getEdgeVerticesPositions, getHexVerticesPositions, getVertexEdgesPositions, getVertexNeighborhoodsPositions, toCoordsArray } from '../../commonTypes/hex-grid/geometry';
+import { computed, ref, useTemplateRef, type PropType } from 'vue';
+import { useI18n } from 'vue-i18n';
+import SelectPlayersDialog from '../../../components/SelectPlayersDialog.vue';
+import type Game from '../../../db/game';
+import type { GameAction } from '../../../services/messages';
+import { rangeArray, removeElement } from '../../../utils/arrayUtils';
+import {
+    findByCoords,
+    getEdgeNeighborhoodsPositions,
+    getEdgeVerticesPositions,
+    getHexVerticesPositions,
+    getVertexEdgesPositions,
+    getVertexNeighborhoodsPositions,
+    toCoordsArray
+} from '../../commonTypes/hex-grid/geometry';
 import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
+import {
+    type CatanBuildIntObjectAction,
+    type CatanBuildRoadAction,
+    type CatanDiscardResourceCards,
+    type CatanEmbarkAction,
+    type CatanEndTurnAction,
+    type CatanMoveRobberAction,
+    type CatanRollDicesAction,
+    type CatanTradeAction,
+    type CatanTradeResponseAction
+} from "../types/actions";
 import {
     buyItemToIntersectionObject,
     CatanBuyItemType,
@@ -54,22 +85,20 @@ import {
     CatanIntersectionObjectType,
     getBuyItems,
     type CatanBuyItem,
-    type CatanDices, type
-        CatanIntersection,
+    type CatanDices, type CatanIntersection,
     type CatanPlayerPrivateState,
     type CatanPublicGameState,
     type CatanResourceCount,
     type CatanRoad,
     type CatanTerrainHex
 } from '../types/types';
-import type { CatanBuildIntObjectAction, CatanBuildRoadAction, CatanDiscardResourceCards, CatanEmbarkAction, CatanEndTurnAction, CatanMoveRobberAction, CatanRollDicesAction } from "../types/actions";
-import type { GameAction } from '../../../services/messages';
-import type Game from '../../../db/game';
-import { rangeArray, removeElement } from '../../../utils/arrayUtils';
-import { resourcesImages } from './graphics';
-import { useI18n } from 'vue-i18n';
+import { getPlayerPrices } from '../types/utils';
+import CatanHexGrid from './CatanHexGrid.vue';
 import CatanResourceCards from './CatanResourceCards.vue';
-import SelectPlayersDialog from '../../../components/SelectPlayersDialog.vue';
+import CatanTradeDialog from './CatanTradeDialog.vue';
+import { resourcesImages } from './graphics';
+import PlayerTradeOfferDialog from './PlayerTradeOfferDialog.vue';
+import TradeOfferAnswerDialog from './TradeOfferAnswerDialog.vue';
 
 const { t } = useI18n({
     locale: 'en',
@@ -159,6 +188,29 @@ const status = computed(() => {
     const playerPart = isLocalPlayerTurn.value ? 'localPlayer' : 'notLocalPlayer'
     return t(`status.${playerPart}.${phase}`, { player: props.game.players[props.gameState.activePlayerIndex]?.name })
 })
+
+const canTrade = computed(() => {
+    return isLocalPlayerTurn.value && props.gameState.phase == CatanGamePhase.PLAYER_TURN
+})
+
+function playerTradeOfferResult(result: boolean) {
+    performAction<CatanTradeResponseAction>({
+        type: 'CatanTradeResponseAction',
+        accepted: result
+    })
+}
+
+const tradeDialog = useTemplateRef('tradeDialog')
+
+async function trade() {
+    const deal = await tradeDialog.value?.open(props.playerPrivateState.resources, getPlayerPrices(props.gameState.field, localPlayer.value.userId))
+    if (deal) {
+        performAction<CatanTradeAction>({
+            type: 'CatanTradeAction',
+            deal: deal
+        })
+    }
+}
 
 const selectPlayesDialog = useTemplateRef('selectPlayesDialog')
 
