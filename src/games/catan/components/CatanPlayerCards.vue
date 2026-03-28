@@ -2,15 +2,26 @@
     <div>
         <div class="flex justify-center mt-2">
             <div class="resource-cards-container">
-                <div v-for="resource, index in flatResources" class="resource-card"
-                    :class="{ 'resource-card-selected': selectedCardsInds.includes(index) }"
-                    v-on:click="cardClick(index)"
-                    style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <img :src="resourceCardsImg[resource]" class="resource-card-image">
+                <div class="flex justify-center">
+                    <div v-for="resource, index in flatResources" class="resource-card"
+                        :class="{ 'resource-card-selected': selectedCardsInds.includes(index) }"
+                        v-on:click="cardClick(index)"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <img :src="resourceCardsImg[resource]" class="resource-card-image">
 
-                    </img>
+                        </img>
+                    </div>
+                </div>
+                <div class="flex justify-center">
+                    <div v-for="devCard in developmentCards" class="resource-card" v-on:click="clickDevCard(devCard)"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <img :src="developmentCardsImgs[devCard]" class="resource-card-image">
+
+                        </img>
+                    </div>
                 </div>
             </div>
+
         </div>
         <div class="flex justify-center gap-3">
             <div class="flex overflow-auto">
@@ -20,14 +31,16 @@
                 </div>
             </div>
         </div>
+        <DevelopmentCardDialog ref="devCardDialog"></DevelopmentCardDialog>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type PropType } from 'vue';
-import type { CatanResourceCount, CatanResourceType } from '../types/types';
-import { resourceCardsImg, resourcesImages } from './graphics';
+import { computed, ref, useTemplateRef, type PropType } from 'vue';
 import { rangeArray, removeElement } from '../../../utils/arrayUtils';
+import { developmentCardIsUsable, type CatanDevelopmentCardType, type CatanResourceCount, type CatanResourceType } from '../types/types';
+import DevelopmentCardDialog from './DevelopmentCardDialog.vue';
+import { developmentCardsImgs, resourceCardsImg, resourcesImages } from './graphics';
 
 const model = defineModel<CatanResourceCount[]>()
 
@@ -61,9 +74,30 @@ function getSelectedResources() {
     })
 }
 
+const devCardDialog = useTemplateRef('devCardDialog')
+
+async function clickDevCard(devCard: CatanDevelopmentCardType) {
+    if (await devCardDialog.value?.open(devCard) && developmentCardIsUsable[devCard]) {
+        emit('useDevCard', devCard)
+    }
+}
+
+const emit = defineEmits<{
+    (e: 'useDevCard', card: CatanDevelopmentCardType): void
+}>()
+
+
 const props = defineProps({
     resources: {
         type: Object as PropType<CatanResourceCount[]>,
+        required: true
+    },
+    developmentCards: {
+        type: Object as PropType<CatanDevelopmentCardType[]>,
+        required: true
+    },
+    openedDevelopmentCards: {
+        type: Object as PropType<CatanDevelopmentCardType[]>,
         required: true
     }
 })

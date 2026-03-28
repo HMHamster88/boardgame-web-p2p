@@ -26,6 +26,42 @@ export enum CatanResourceType {
     ORE = "ORE"
 }
 
+export enum CatanDevelopmentCardType {
+    KNIGNT = 'KNIGHT',
+    BUILD_ROADS = 'BUILD_ROADS',
+    MONOPOLY = 'MONOPOLY',
+    YEAR_OF_PLENTY = 'YEAR_OF_PLENTY',
+    CHAPEL = 'CHAPEL',
+    GREAT_HALL = 'GREAT_HALL',
+    LIBRARY = 'LIBRARY',
+    MARKET = 'MARKET',
+    UNIVERSITY = 'UNIVERSITY'
+}
+
+export const developmentCardsCount: Record<CatanDevelopmentCardType, number> = {
+    [CatanDevelopmentCardType.KNIGNT]: 14,
+    [CatanDevelopmentCardType.BUILD_ROADS]: 2,
+    [CatanDevelopmentCardType.MONOPOLY]: 2,
+    [CatanDevelopmentCardType.YEAR_OF_PLENTY]: 2,
+    [CatanDevelopmentCardType.CHAPEL]: 1,
+    [CatanDevelopmentCardType.GREAT_HALL]: 1,
+    [CatanDevelopmentCardType.LIBRARY]: 1,
+    [CatanDevelopmentCardType.MARKET]: 1,
+    [CatanDevelopmentCardType.UNIVERSITY]: 1
+}
+
+export const developmentCardIsUsable: Record<CatanDevelopmentCardType, boolean> = {
+    [CatanDevelopmentCardType.KNIGNT]: true,
+    [CatanDevelopmentCardType.BUILD_ROADS]: true,
+    [CatanDevelopmentCardType.MONOPOLY]: true,
+    [CatanDevelopmentCardType.YEAR_OF_PLENTY]: true,
+    [CatanDevelopmentCardType.CHAPEL]: true,
+    [CatanDevelopmentCardType.GREAT_HALL]: true,
+    [CatanDevelopmentCardType.LIBRARY]: true,
+    [CatanDevelopmentCardType.MARKET]: true,
+    [CatanDevelopmentCardType.UNIVERSITY]: true
+}
+
 export enum CatanHarbourType {
     THREE_TO_ONE = "THREE_TO_ONE",
     CLAY = "CLAY",
@@ -93,7 +129,7 @@ export interface CatanGameSettings extends GameSettings {
 }
 
 export interface CatanPlayerPublicState extends PlayerPublicState {
-
+    openedDevelopmentCards: CatanDevelopmentCardType[]
 }
 
 export enum CatanDiceValue {
@@ -149,11 +185,14 @@ export interface CatanTradeDeal {
 
 export interface CatanPlayerPrivateState extends PlayerPrivateState {
     resources: CatanResourceCount[]
+    developmentCards: CatanDevelopmentCardType[]
     discardCardsCount: number
 }
 
 export interface CatanPrivateGameState extends GamePrivateState {
     playersStates: CatanPlayerPrivateState[]
+    developmentCardsDeck: CatanDevelopmentCardType[]
+    developmentCardDiscardPile: CatanDevelopmentCardType[]
 }
 
 export enum CatanBuyItemType {

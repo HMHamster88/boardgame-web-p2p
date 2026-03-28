@@ -1,6 +1,6 @@
 import type { GameAction } from "../../../services/messages";
 import type { Vector2DLike } from "../../commonTypes/vector2d";
-import type { CatanIntersectionObjectType, CatanResourceCount, CatanTradeDeal } from "./types";
+import type { CatanDevelopmentCardType, CatanIntersectionObjectType, CatanResourceCount, CatanTradeDeal } from "./types";
 
 
 export interface CatanGenerateFieldAction extends GameAction {
@@ -26,6 +26,15 @@ export interface CatanBuildIntObjectAction extends GameAction {
 export interface CatanBuildRoadAction extends GameAction {
     type: 'CatanBuildRoadAction'
     position: Vector2DLike
+}
+
+export interface CatanBuyDevelopmentCardAction extends GameAction {
+    type: 'CatanBuyDevelopmentCardAction'
+}
+
+export interface CatanUseDevelopmentCardAction extends GameAction {
+    type: 'CatanUseDevelopmentCardAction',
+    developmentCard: CatanDevelopmentCardType
 }
 
 export interface CatanEndTurnAction extends GameAction {

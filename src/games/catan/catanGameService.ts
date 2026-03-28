@@ -14,15 +14,17 @@ import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions,
 import { Vector2D } from '../commonTypes/vector2d';
 import CatanGameView from "./components/CatanGameView.vue";
 import CatanSettings from "./components/CatanSettings.vue";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction } from "./types/actions";
+import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanBuyDevelopmentCardAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction, type CatanUseDevelopmentCardAction } from "./types/actions";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import {
     CatanBuyItemType,
+    CatanDevelopmentCardType,
     CatanDiceValue,
     CatanGamePhase,
     CatanIntersectionObjectType,
     CatanTradeType,
+    developmentCardsCount,
     getBuyItems,
     intersectionObjectRoBuyItem,
     type CatanField,
@@ -89,7 +91,8 @@ export class CatanGameService implements GameService {
         const publicPlayersStates = game.players.map(player => {
             const state: CatanPlayerPublicState = {
                 playerId: player.userId,
-                points: 0
+                points: 0,
+                openedDevelopmentCards: []
             }
             return state
         })
@@ -109,14 +112,21 @@ export class CatanGameService implements GameService {
             const state: CatanPlayerPrivateState = {
                 playerId: player.userId,
                 resources: [],
-                discardCardsCount: 0
+                discardCardsCount: 0,
+                developmentCards: []
             }
             return state
         })
 
+        const developmentCardsDeck = getShuffledArray(Object.values(CatanDevelopmentCardType)
+            .flatMap(type => rangeArray(developmentCardsCount[type]).map(_i => type)))
+
         const privateState: CatanPrivateGameState = {
-            playersStates: privatePlayerStates
+            playersStates: privatePlayerStates,
+            developmentCardsDeck: developmentCardsDeck,
+            developmentCardDiscardPile: []
         }
+
         const gameState: GameState = {
             id: game.id,
             publicState: publicState,
@@ -432,6 +442,16 @@ export class CatanGameService implements GameService {
                     }
                 }
                 gamePublicStateSync.sendUpdateTS('playerTradeOffer')
+            },
+            onCatanBuyDevelopmentCardAction: (_action: CatanBuyDevelopmentCardAction) => {
+                if (privateState.developmentCardsDeck.length == 0) {
+                    privateState.developmentCardsDeck = getShuffledArray(privateState.developmentCardDiscardPile)
+                }
+                privatePlayerState.developmentCards.push(privateState.developmentCardsDeck.pop()!)
+                playerPrivateStateSync.get(playerId)?.sendUpdateTS('developmentCards')
+            },
+            onCatanUseDevelopmentCardAction: (action: CatanUseDevelopmentCardAction) => {
+
             }
         }, gameAction)
 

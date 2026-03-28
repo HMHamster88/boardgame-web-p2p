@@ -33,17 +33,20 @@
         <Button :disabled="!canEndTurn" v-on:click="endTurn()">{{ t('endTurn') }}</Button>
     </div>
     <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
-        :resources="playerPrivateState.resources">
+        :resources="playerPrivateState.resources" :development-cards="playerPrivateState.developmentCards"
+        :opened-development-cards="publicPlayerState?.openedDevelopmentCards!" v-on:use-dev-card="useDevCard">
     </CatanResourceCards>
 
     <SelectPlayersDialog ref="selectPlayesDialog"></SelectPlayersDialog>
     <CatanTradeDialog ref="tradeDialog"></CatanTradeDialog>
-    <PlayerTradeOfferDialog :available-resources="playerPrivateState.resources" :players="game.players"
-        :player-trade-offer="gameState.playerTradeOffer" :local-player-id="localPlayer.userId"
-        @result="playerTradeOfferResult">
-    </PlayerTradeOfferDialog>
-    <TradeOfferAnswerDialog :players="game.players" :player-trade-offer="gameState.playerTradeOffer"
-        :local-player-id="localPlayer.userId"></TradeOfferAnswerDialog>
+    <div v-if="gameState.playerTradeOffer">
+        <PlayerTradeOfferDialog :available-resources="playerPrivateState.resources" :players="game.players"
+            :player-trade-offer="gameState.playerTradeOffer" :local-player-id="localPlayer.userId"
+            @result="playerTradeOfferResult">
+        </PlayerTradeOfferDialog>
+        <TradeOfferAnswerDialog :players="game.players" :player-trade-offer="gameState.playerTradeOffer"
+            :local-player-id="localPlayer.userId"></TradeOfferAnswerDialog>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -69,17 +72,20 @@ import { Vector2D, type Vector2DLike } from '../../commonTypes/vector2d';
 import {
     type CatanBuildIntObjectAction,
     type CatanBuildRoadAction,
+    type CatanBuyDevelopmentCardAction,
     type CatanDiscardResourceCards,
     type CatanEmbarkAction,
     type CatanEndTurnAction,
     type CatanMoveRobberAction,
     type CatanRollDicesAction,
     type CatanTradeAction,
-    type CatanTradeResponseAction
+    type CatanTradeResponseAction,
+    type CatanUseDevelopmentCardAction
 } from "../types/actions";
 import {
     buyItemToIntersectionObject,
     CatanBuyItemType,
+    CatanDevelopmentCardType,
     catanEmbarkPhases,
     CatanGamePhase,
     CatanIntersectionObjectType,
@@ -94,7 +100,7 @@ import {
 } from '../types/types';
 import { getPlayerPrices } from '../types/utils';
 import CatanHexGrid from './CatanHexGrid.vue';
-import CatanResourceCards from './CatanResourceCards.vue';
+import CatanResourceCards from './CatanPlayerCards.vue';
 import CatanTradeDialog from './CatanTradeDialog.vue';
 import { resourcesImages } from './graphics';
 import PlayerTradeOfferDialog from './PlayerTradeOfferDialog.vue';
@@ -175,6 +181,13 @@ const { t } = useI18n({
         }
     }
 })
+
+function useDevCard(devCard: CatanDevelopmentCardType) {
+    performAction<CatanUseDevelopmentCardAction>({
+        type: 'CatanUseDevelopmentCardAction',
+        developmentCard: devCard
+    })
+}
 
 const status = computed(() => {
     const phase = props.gameState.phase
@@ -293,7 +306,7 @@ function buyItemClick(item: CatanBuyItem) {
         return
     }
     if (item.type == CatanBuyItemType.DEVELOPMENT_CARD) {
-        // TODO
+        performAction<CatanBuyDevelopmentCardAction>({ type: 'CatanBuyDevelopmentCardAction' })
     } else {
         buildItemType.value = item.type
     }
@@ -567,6 +580,10 @@ const emit = defineEmits<{
 
 const isLocalPlayerTurn = computed(() => {
     return props.localPlayerIndex == props.gameState.activePlayerIndex
+})
+
+const publicPlayerState = computed(() => {
+    return props.gameState.playersStates[props.localPlayerIndex]
 })
 
 const props = defineProps({

@@ -20,14 +20,36 @@ import sheepCardImg from '../assets/resource-cards/sheep.png'
 import wheatCardImg from '../assets/resource-cards/wheat.png'
 import woodCardImg from '../assets/resource-cards/wood.png'
 
-import settlementImg from '../assets/intersection-objects/settlement.png'
 import cityImg from '../assets/intersection-objects/city.png'
+import settlementImg from '../assets/intersection-objects/settlement.png'
 
-import { CatanHarbourType, CatanIntersectionObjectType, CatanResourceType } from '../types/types'
 import { CatanTerrainHexType } from "../types/catanTerrainHexType"
+import { CatanDevelopmentCardType, CatanHarbourType, CatanIntersectionObjectType, CatanResourceType } from '../types/types'
 
 export const portImage = portImg
 export const roadImage = roadImg
+
+import buidRoadsImg from '../assets/development-cards/build-roads.png'
+import chapelImg from '../assets/development-cards/chapel.png'
+import greatHallImg from '../assets/development-cards/great-hall.png'
+import kinghtImg from '../assets/development-cards/knight.png'
+import libraryImg from '../assets/development-cards/library.png'
+import marketImg from '../assets/development-cards/market.png'
+import monopolyImg from '../assets/development-cards/monopoly.png'
+import universityImg from '../assets/development-cards/university.png'
+import yearOfPlentyImg from '../assets/development-cards/year-of-plenty.png'
+
+export const developmentCardsImgs: Record<CatanDevelopmentCardType, string> = {
+    [CatanDevelopmentCardType.KNIGNT]: kinghtImg,
+    [CatanDevelopmentCardType.BUILD_ROADS]: buidRoadsImg,
+    [CatanDevelopmentCardType.MONOPOLY]: monopolyImg,
+    [CatanDevelopmentCardType.YEAR_OF_PLENTY]: yearOfPlentyImg,
+    [CatanDevelopmentCardType.CHAPEL]: chapelImg,
+    [CatanDevelopmentCardType.GREAT_HALL]: greatHallImg,
+    [CatanDevelopmentCardType.LIBRARY]: libraryImg,
+    [CatanDevelopmentCardType.MARKET]: marketImg,
+    [CatanDevelopmentCardType.UNIVERSITY]: universityImg
+}
 
 export const resourceCardsImg: Record<CatanResourceType, string> = {
     [CatanResourceType.CLAY]: bricsCardImg,
