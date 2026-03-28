@@ -1,6 +1,7 @@
-import _ from 'lodash';
-import type { P2PConnection, PeerFilter } from './p2p';
 import EventEmitter from 'eventemitter3';
+import _ from 'lodash';
+import { typedPath, type TypedPathWrapper } from 'typed-path';
+import type { P2PConnection, PeerFilter } from './p2p';
 
 interface ObjectSyncPart {
     path: string | undefined,
@@ -29,6 +30,12 @@ interface ObjectSyncEvents {
 type PropName<T extends object> = T extends string | symbol
     ? T
     : keyof T;
+
+interface HasToString {
+    toString(): string
+}
+
+type TypedPathFun<T> = (tp: TypedPathWrapper<T, Record<never, never>>) => HasToString | HasToString[]
 
 export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents> {
     id: string
@@ -76,7 +83,42 @@ export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents>
         })
     }
 
-    sendUpdateTS(props: PropName<T>[] | PropName<T>, peerFilter: string | PeerFilter | null = null) {
+    sendUpdateTypedPath(peerFilter: string | PeerFilter | null, pathFun: TypedPathFun<T>) {
+        if (!this.value) {
+            return
+        }
+
+        const paths = pathFun(typedPath<T>())
+        let parts: ObjectSyncPart[] = []
+
+        if (Array.isArray(paths)) {
+            parts = paths.map(prop => {
+                const path = prop.toString()
+                const propVal: any = _.get(this.value, path)
+                const part: ObjectSyncPart = {
+                    path: prop.toString(),
+                    value: propVal
+                }
+                return part
+            })
+        } else {
+            parts = [
+                {
+                    path: paths.toString(),
+                    value: _.get(this.value, paths.toString())
+                }
+            ]
+        }
+
+        const updateMessage: ObjectSyncMessage = {
+            type: 'ObjectSyncMessage',
+            objectId: this.id,
+            parts: parts
+        }
+        this.sendMessage(updateMessage, peerFilter)
+    }
+
+    sendUpdateTSBack(props: PropName<T>[] | PropName<T>, peerFilter: string | PeerFilter | null = null) {
         let parts: ObjectSyncPart[] = []
 
         if (!this.value) {

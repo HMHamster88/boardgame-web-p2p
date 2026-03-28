@@ -144,7 +144,7 @@ export class CatanGameService implements GameService {
         const isSettingsAction = await handleMessage({
             onCatanGenerateFieldAction: () => {
                 settings.field = this.generateField(settings.fieldType)
-                host.gameSync?.sendUpdateTS('settings')
+                host.gameSync?.sendUpdateTypedPath(null, tp => tp.settings)
             }
         }, gameAction)
 
@@ -214,8 +214,7 @@ export class CatanGameService implements GameService {
                         publicState.phase = CatanGamePhase.THROWING_DICE
                     }
                 }
-
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources', playerId)
+                playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(playerId, tp => tp.resources)
                 gamePublicStateSync.sendUpdate(['field.intersections', 'field.roads', 'activePlayerIndex', 'phase'])
             },
             onCatanRollDicesAction: async () => {
@@ -227,7 +226,7 @@ export class CatanGameService implements GameService {
 
                 dices.redDice = 0
                 dices.yellowDice = 0
-                gamePublicStateSync.sendUpdateTS('dices')
+                gamePublicStateSync.sendUpdateTypedPath(null, tp => tp.dices)
                 await sleep(1000)
 
                 dices.redDice = _.random(CatanDiceValue.ONE, CatanDiceValue.SIX)
@@ -245,7 +244,7 @@ export class CatanGameService implements GameService {
                             const discardCardsCount = Math.ceil(allResourcesCount / 2)
                             player.discardCardsCount = discardCardsCount
                             anyoneHasResourceExcess = true
-                            playerPrivateStateSync.get(player.playerId)?.sendUpdateTS('discardCardsCount')
+                            playerPrivateStateSync.get(player.playerId)?.sendUpdateTypedPath(null, tp => tp.discardCardsCount)
                         }
                     }
                     if (anyoneHasResourceExcess) {
@@ -253,7 +252,7 @@ export class CatanGameService implements GameService {
                     } else {
                         publicState.phase = CatanGamePhase.MOVE_ROBBER
                     }
-                    gamePublicStateSync.sendUpdateTS(['dices', 'phase'])
+                    gamePublicStateSync.sendUpdateTypedPath(null, tp => [tp.dices, tp.phase])
                     return
                 }
 
@@ -277,10 +276,10 @@ export class CatanGameService implements GameService {
                     })
                 }
 
-                playersUpdateId.forEach(playerId => playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources'))
+                playersUpdateId.forEach(playerId => playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.resources))
 
                 publicState.phase = CatanGamePhase.PLAYER_TURN
-                gamePublicStateSync.sendUpdateTS(['dices', 'phase'])
+                gamePublicStateSync.sendUpdateTypedPath(null, tp => [tp.dices, tp.phase])
             },
             onCatanBuildRoadAction: (action: CatanBuildRoadAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
@@ -304,7 +303,7 @@ export class CatanGameService implements GameService {
                 }
                 field.roads.push(road)
                 this.removeResources(activePlayerPrivteState, resources)
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => [tp.resources])
                 gamePublicStateSync?.sendUpdate('field.roads')
             },
             onCatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
@@ -347,7 +346,7 @@ export class CatanGameService implements GameService {
                 }
 
                 this.removeResources(activePlayerPrivteState, resources)
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
                 gamePublicStateSync.sendUpdate('field.intersections')
             },
             onCatanEndTurnAction: (_action: CatanEndTurnAction) => {
@@ -356,7 +355,7 @@ export class CatanGameService implements GameService {
                 }
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
                 publicState.phase = CatanGamePhase.THROWING_DICE
-                gamePublicStateSync.sendUpdateTS(['activePlayerIndex', 'phase'])
+                gamePublicStateSync.sendUpdateTypedPath(null, tp => [tp.activePlayerIndex, tp.phase])
             },
             onCatanDiscardResourceCards: (action: CatanDiscardResourceCards) => {
                 if (privatePlayerState.discardCardsCount != getAllResourcesCount(action.resources)) {
@@ -366,10 +365,10 @@ export class CatanGameService implements GameService {
 
                 this.removeResources(privatePlayerState, action.resources);
                 privatePlayerState.discardCardsCount = 0;
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS(['resources', 'discardCardsCount']);
+                playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => [tp.resources, tp.discardCardsCount]);
                 if (privateState.playersStates.every(ps => ps.discardCardsCount == 0)) {
                     publicState.phase = CatanGamePhase.MOVE_ROBBER;
-                    gamePublicStateSync.sendUpdateTS('phase');
+                    gamePublicStateSync.sendUpdateTypedPath(null, tp => tp.phase);
                 }
             },
             onCatanMoveRobberAction: (action: CatanMoveRobberAction) => {
@@ -386,8 +385,8 @@ export class CatanGameService implements GameService {
                         }
                         this.removeResources(playerToRob, [resourceRob])
                         this.addResources(privatePlayerState, [resourceRob])
-                        playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
-                        playerPrivateStateSync.get(playerToRob.playerId)?.sendUpdateTS('resources')
+                        playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
+                        playerPrivateStateSync.get(playerToRob.playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
                     }
                 }
 
@@ -406,7 +405,7 @@ export class CatanGameService implements GameService {
                 if (deal.type == CatanTradeType.BANK) {
                     this.removeResources(privatePlayerState, deal.offered)
                     this.addResources(privatePlayerState, deal.required)
-                    playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                    playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
                 } else {
                     publicState.playerTradeOffer = {
                         playerId: playerId,
@@ -414,7 +413,7 @@ export class CatanGameService implements GameService {
                         required: deal.required,
                         rejectedPlayerIds: []
                     }
-                    gamePublicStateSync.sendUpdateTS('playerTradeOffer')
+                    gamePublicStateSync.sendUpdateTypedPath(null, tp => tp.playerTradeOffer)
                 }
             },
             onCatanTradeResponseAction: (action: CatanTradeResponseAction) => {
@@ -430,8 +429,8 @@ export class CatanGameService implements GameService {
 
                     this.removeResources(tradePlayerState, tradeOffer.offered)
                     this.addResources(tradePlayerState, tradeOffer.required)
-                    playerPrivateStateSync.get(tradeOffer.playerId)?.sendUpdateTS('resources')
-                    playerPrivateStateSync.get(playerId)?.sendUpdateTS('resources')
+                    playerPrivateStateSync.get(tradeOffer.playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
+                    playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.resources)
                     publicState.playerTradeOffer = undefined
                     host.sendNotify(tradeOffer.playerId, 'playerAcceptedDeal', { player: game.players.find(pl => pl.userId == playerId)?.name })
                 } else {
@@ -441,16 +440,16 @@ export class CatanGameService implements GameService {
                         publicState.playerTradeOffer = undefined
                     }
                 }
-                gamePublicStateSync.sendUpdateTS('playerTradeOffer')
+                gamePublicStateSync.sendUpdateTypedPath(null, tp => tp.playerTradeOffer)
             },
             onCatanBuyDevelopmentCardAction: (_action: CatanBuyDevelopmentCardAction) => {
                 if (privateState.developmentCardsDeck.length == 0) {
                     privateState.developmentCardsDeck = getShuffledArray(privateState.developmentCardDiscardPile)
                 }
                 privatePlayerState.developmentCards.push(privateState.developmentCardsDeck.pop()!)
-                playerPrivateStateSync.get(playerId)?.sendUpdateTS('developmentCards')
+                playerPrivateStateSync.get(playerId)?.sendUpdateTypedPath(null, tp => tp.developmentCards)
             },
-            onCatanUseDevelopmentCardAction: (action: CatanUseDevelopmentCardAction) => {
+            onCatanUseDevelopmentCardAction: (_action: CatanUseDevelopmentCardAction) => {
 
             }
         }, gameAction)
