@@ -73,6 +73,9 @@ const canAccept = computed(() => {
         return false
     }
     return props.playerTradeOffer?.required.every(req => {
+        if (req.count == 0) {
+            return true
+        }
         const aResource = getByType(props.availableResources, req.type)
         if (!aResource) {
             return
