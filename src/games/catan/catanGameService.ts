@@ -24,6 +24,7 @@ import {
     CatanGamePhase,
     CatanIntersectionObjectType,
     CatanTradeType,
+    developmentCardSaves,
     developmentCardsCount,
     getBuyItems,
     intersectionObjectRoBuyItem,
@@ -160,6 +161,7 @@ export class CatanGameService implements GameService {
         const activePlayer = game.players[publicState.activePlayerIndex]
         const activePlayerId = activePlayer?.userId
         const privatePlayerState = privateState.playersStates.find(pl => pl.playerId == playerId)!
+        const publicPlayerState = publicState.playersStates.find(pl => pl.playerId == playerId)!
         const activePlayerPrivteState = privateState.playersStates[publicState.activePlayerIndex]
         const isActivePlayerAction = playerId == activePlayerId
         const gamePublicStateSync = host.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
@@ -426,9 +428,18 @@ export class CatanGameService implements GameService {
                     privateState.developmentCardsDeck = getShuffledArray(privateState.developmentCardDiscardPile)
                 }
                 privatePlayerState.developmentCards.push(privateState.developmentCardsDeck.pop()!)
+                const cost = getBuyItems().find(item => item.type == CatanBuyItemType.DEVELOPMENT_CARD)?.resources!
+                this.removeResources(privatePlayerState, cost)
             },
-            onCatanUseDevelopmentCardAction: (_action: CatanUseDevelopmentCardAction) => {
-
+            onCatanUseDevelopmentCardAction: (action: CatanUseDevelopmentCardAction) => {
+                removeElement(privatePlayerState.developmentCards, action.developmentCard)
+                if (developmentCardSaves[action.developmentCard]) {
+                    publicPlayerState.openedDevelopmentCards.push(action.developmentCard)
+                }
+                if (action.developmentCard == CatanDevelopmentCardType.KNIGNT) {
+                    publicState.phase = CatanGamePhase.MOVE_ROBBER
+                    return
+                }
             }
         }, gameAction)
 

@@ -62,6 +62,18 @@ export const developmentCardIsUsable: Record<CatanDevelopmentCardType, boolean> 
     [CatanDevelopmentCardType.UNIVERSITY]: true
 }
 
+export const developmentCardSaves: Record<CatanDevelopmentCardType, boolean> = {
+    [CatanDevelopmentCardType.KNIGNT]: true,
+    [CatanDevelopmentCardType.BUILD_ROADS]: false,
+    [CatanDevelopmentCardType.MONOPOLY]: false,
+    [CatanDevelopmentCardType.YEAR_OF_PLENTY]: false,
+    [CatanDevelopmentCardType.CHAPEL]: false,
+    [CatanDevelopmentCardType.GREAT_HALL]: false,
+    [CatanDevelopmentCardType.LIBRARY]: false,
+    [CatanDevelopmentCardType.MARKET]: false,
+    [CatanDevelopmentCardType.UNIVERSITY]: false
+}
+
 export enum CatanHarbourType {
     THREE_TO_ONE = "THREE_TO_ONE",
     CLAY = "CLAY",
