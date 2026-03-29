@@ -1,9 +1,9 @@
 import EventEmitter from "eventemitter3";
+import _ from "lodash";
+import { ref } from "vue";
 import type Game from "../db/game";
 import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import { extractGameIdFromPeerId, getGameObserverId, handleMessage, isGamePeerId, type GameInfoMessage, type GameMessage } from "./messages";
-import { ref } from "vue";
-import _ from "lodash";
 
 interface GameObserverEvents {
     gameReceived: (game: Game) => void
@@ -27,8 +27,8 @@ export default class GameObserver extends EventEmitter<GameObserverEvents> {
 
         this.connection.on('dataMessage', (_peerId, message) => {
             const gameMessage = JSON.parse(message) as GameMessage
-            handleMessage({
-                onGameInfoMessage: (message: GameInfoMessage) => {
+            handleMessage<GameInfoMessage>({
+                GameInfoMessage: (message: GameInfoMessage) => {
                     this.games.value.push(message.game)
                 }
             }, gameMessage)

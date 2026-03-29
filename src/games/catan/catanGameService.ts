@@ -7,14 +7,27 @@ import type { GameState } from "../../db/gameState";
 import type { ObjectSync } from '../../p2p/objectSync';
 import type GameHost from '../../services/gameHost';
 import type { GameService } from "../../services/gameService/gameService";
-import { handleMessage, type GameAction } from "../../services/messages";
+import { handleMessage, type GameAction, type MesasgeHandlers } from "../../services/messages";
 import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
 import { sleep } from '../../utils/functionUtils';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import { Vector2D } from '../commonTypes/vector2d';
 import CatanGameView from "./components/CatanGameView.vue";
 import CatanSettings from "./components/CatanSettings.vue";
-import { type CatanBuildIntObjectAction, type CatanBuildRoadAction, type CatanBuyDevelopmentCardAction, type CatanDiscardResourceCards, type CatanEmbarkAction, type CatanEndTurnAction, type CatanMoveRobberAction, type CatanTradeAction, type CatanTradeResponseAction, type CatanUseDevelopmentCardAction } from "./types/actions";
+import {
+    type CatanBuildIntObjectAction,
+    type CatanBuildRoadAction,
+    type CatanBuyDevelopmentCardAction,
+    type CatanDiscardResourceCards,
+    type CatanEmbarkAction,
+    type CatanEndTurnAction,
+    type CatanGenerateFieldAction,
+    type CatanMoveRobberAction,
+    type CatanRollDicesAction,
+    type CatanTradeAction,
+    type CatanTradeResponseAction,
+    type CatanUseDevelopmentCardAction
+} from "./types/actions";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
 import {
@@ -144,8 +157,8 @@ export class CatanGameService implements GameService {
     async performAction(game: Game, gameState: GameState, gameAction: GameAction, playerId: string, host: GameHost): Promise<void> {
         const settings = game.settings as CatanGameSettings
 
-        const isSettingsAction = await handleMessage({
-            onCatanGenerateFieldAction: () => {
+        const isSettingsAction = await handleMessage<CatanGenerateFieldAction>({
+            CatanGenerateFieldAction: () => {
                 settings.field = this.generateField(settings.fieldType)
                 host.gameSync?.sendUpdateTypedPath(null, tp => tp.settings)
             }
@@ -166,8 +179,20 @@ export class CatanGameService implements GameService {
         const isActivePlayerAction = playerId == activePlayerId
         const gamePublicStateSync = host.gamePublicStateSync as any as ObjectSync<CatanPublicGameState>
 
-        await handleMessage({
-            onCatanEmbarkAction: (action: CatanEmbarkAction) => {
+        type catanActionTypes = CatanEmbarkAction |
+            CatanRollDicesAction |
+            CatanBuildRoadAction |
+            CatanBuildIntObjectAction |
+            CatanEndTurnAction |
+            CatanDiscardResourceCards |
+            CatanMoveRobberAction |
+            CatanTradeAction |
+            CatanTradeResponseAction |
+            CatanBuyDevelopmentCardAction |
+            CatanUseDevelopmentCardAction
+
+        const handlers: MesasgeHandlers<catanActionTypes> = {
+            CatanEmbarkAction: (action: CatanEmbarkAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
                 }
@@ -218,7 +243,7 @@ export class CatanGameService implements GameService {
                     }
                 }
             },
-            onCatanRollDicesAction: async () => {
+            CatanRollDicesAction: async () => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
                 }
@@ -277,7 +302,7 @@ export class CatanGameService implements GameService {
 
                 publicState.phase = CatanGamePhase.PLAYER_TURN
             },
-            onCatanBuildRoadAction: (action: CatanBuildRoadAction) => {
+            CatanBuildRoadAction: (action: CatanBuildRoadAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
                 }
@@ -300,7 +325,7 @@ export class CatanGameService implements GameService {
                 field.roads.push(road)
                 this.removeResources(activePlayerPrivteState, resources)
             },
-            onCatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
+            CatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
                 }
@@ -341,14 +366,14 @@ export class CatanGameService implements GameService {
 
                 this.removeResources(activePlayerPrivteState, resources)
             },
-            onCatanEndTurnAction: (_action: CatanEndTurnAction) => {
+            CatanEndTurnAction: (_action: CatanEndTurnAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
                     return
                 }
                 publicState.activePlayerIndex = (publicState.activePlayerIndex + 1) % game.players.length
                 publicState.phase = CatanGamePhase.THROWING_DICE
             },
-            onCatanDiscardResourceCards: (action: CatanDiscardResourceCards) => {
+            CatanDiscardResourceCards: (action: CatanDiscardResourceCards) => {
                 if (privatePlayerState.discardCardsCount != getAllResourcesCount(action.resources)) {
                     console.debug('Invalid card discard count');
                     return;
@@ -360,7 +385,7 @@ export class CatanGameService implements GameService {
                     publicState.phase = CatanGamePhase.MOVE_ROBBER;
                 }
             },
-            onCatanMoveRobberAction: (action: CatanMoveRobberAction) => {
+            CatanMoveRobberAction: (action: CatanMoveRobberAction) => {
                 field.robberPos = action.position
 
 
@@ -379,7 +404,7 @@ export class CatanGameService implements GameService {
 
                 publicState.phase = CatanGamePhase.PLAYER_TURN
             },
-            onCatanTradeAction: (action: CatanTradeAction) => {
+            CatanTradeAction: (action: CatanTradeAction) => {
                 if (playerId != activePlayerId) {
                     return
                 }
@@ -400,7 +425,7 @@ export class CatanGameService implements GameService {
                     }
                 }
             },
-            onCatanTradeResponseAction: (action: CatanTradeResponseAction) => {
+            CatanTradeResponseAction: (action: CatanTradeResponseAction) => {
                 const tradeOffer = publicState.playerTradeOffer
                 if (!tradeOffer) {
                     console.debug('No active offer')
@@ -423,7 +448,7 @@ export class CatanGameService implements GameService {
                     }
                 }
             },
-            onCatanBuyDevelopmentCardAction: (_action: CatanBuyDevelopmentCardAction) => {
+            CatanBuyDevelopmentCardAction: (_action: CatanBuyDevelopmentCardAction) => {
                 if (privateState.developmentCardsDeck.length == 0) {
                     privateState.developmentCardsDeck = getShuffledArray(privateState.developmentCardDiscardPile)
                 }
@@ -431,7 +456,7 @@ export class CatanGameService implements GameService {
                 const cost = getBuyItems().find(item => item.type == CatanBuyItemType.DEVELOPMENT_CARD)?.resources!
                 this.removeResources(privatePlayerState, cost)
             },
-            onCatanUseDevelopmentCardAction: (action: CatanUseDevelopmentCardAction) => {
+            CatanUseDevelopmentCardAction: (action: CatanUseDevelopmentCardAction) => {
                 removeElement(privatePlayerState.developmentCards, action.developmentCard)
                 if (developmentCardSaves[action.developmentCard]) {
                     publicPlayerState.openedDevelopmentCards.push(action.developmentCard)
@@ -441,7 +466,9 @@ export class CatanGameService implements GameService {
                     return
                 }
             }
-        }, gameAction)
+        }
+
+        await handleMessage(handlers, gameAction)
 
     }
 
