@@ -10,7 +10,8 @@
                         <CatanResourceCountSelector :resourceType="resourceType"
                             v-model="getByType(deal.offered, resourceType)!.count"
                             :step="step(deal.type, resourceType, resourcePrices)"
-                            :max="getByType(availableResources, resourceType)?.count">
+                            :max="getByType(availableResources, resourceType)?.count"
+                            :available="getByType(availableResources, resourceType)?.count">
                         </CatanResourceCountSelector>
                         <span v-if="deal.type == CatanTradeType.BANK" class="text-nowrap">
                             {{ getByType(resourcePrices, resourceType)?.price }} : 1
@@ -39,13 +40,12 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import _ from 'lodash';
 import { ref, watch } from 'vue';
-import { CatanResourceType, CatanTradeType, type CatanResourceCount, type CatanResourcePrice, type CatanTradeDeal } from '../types/types';
-import CatanResourceCountSelector from './CatanResourceCountSelector.vue';
+import { useI18n } from 'vue-i18n';
 import { getByType } from '../../../utils/arrayUtils';
+import { CatanResourceType, CatanTradeType, type CatanResourceCount, type CatanResourcePrice, type CatanTradeDeal } from '../types/types';
 import { checkDeal } from '../types/utils';
+import CatanResourceCountSelector from './CatanResourceCountSelector.vue';
 
 let localization: any = {
     en: {

@@ -6,7 +6,7 @@ import type { GamePublicState, GameState, PlayerPrivateState } from "../db/gameS
 import { ObjectSync } from "../p2p/objectSync";
 import { P2PConnection, p2pDefaultConfig } from "../p2p/p2p";
 import { removeElement } from "../utils/arrayUtils";
-import { createDeepProxy, getSubObjectPaths, type PropPath } from "../utils/proxyObject";
+import { getSubObjectChanges, watchChagesList, type PropChange } from "../utils/proxyObject";
 import type { GameService } from "./gameService/gameService";
 import getGameSerivce from "./gameService/gameServiceSelector";
 import { getGamePeerId, isGameObserverId, isNotGameObserverId, type ErorrGameMessage, type GameActionMessage, type GameInfoMessage, type GameMessage, type JoinGameMessage, type KickPlayerMessage, type NotifyGameMessage, type StartGameMessage } from "./messages";
@@ -104,39 +104,40 @@ export default class GameHost {
                 }
                 this.playerPrivateStateSync.forEach(sync => sync.updateSended = false)
 
-                const gameStateChanges: PropPath[] = []
+                const gameStateChanges: PropChange[] = []
 
-                const gameStateProxy = this.gameService.automaticSync ? createDeepProxy(this.gameState, (path, _value) => {
-                    gameStateChanges.push(path)
-                }) :
+                const gameStateProxy = this.gameService.automaticSync ? watchChagesList(this.gameState, gameStateChanges) :
                     this.gameState
 
                 await this.gameService.performAction(this.game, gameStateProxy, message.action, peerId, this)
 
                 if (this.gameService.automaticSync) {
-                    const publicStateChanges = getSubObjectPaths(gameStateChanges, [typedPath<GameState>().publicState.toString()])
-                        .map(path => path.join('.'))
+                    const publicStateChanges = getSubObjectChanges(gameStateChanges, [typedPath<GameState>().publicState.toString()])
 
-                    this.gamePublicStateSync.sendUpdate(publicStateChanges)
 
-                    const privatePlayerStatesChanges = getSubObjectPaths(gameStateChanges, ['privateState', 'playersStates'])
-                    const playerChangesMap = new Map<number, PropPath[]>()
+                    this.gamePublicStateSync.sendPropChanges(publicStateChanges)
 
-                    for (var path of privatePlayerStatesChanges) {
-                        const playerIndex = Number(path[0])
+                    const privatePlayerStatesChanges = getSubObjectChanges(gameStateChanges, ['privateState', 'playersStates'])
+                    const playerChangesMap = new Map<number, PropChange[]>()
+
+                    for (var change of privatePlayerStatesChanges) {
+                        const playerIndex = Number(change.path[0])
                         let playerChanges = playerChangesMap.get(playerIndex)
                         if (!playerChanges) {
                             playerChanges = []
                             playerChangesMap.set(playerIndex, playerChanges)
                         }
-                        playerChanges.push(path.slice(1))
+                        const playerChange: PropChange = {
+                            path: change.path.slice(1),
+                            value: change.value
+                        }
+                        playerChanges.push(playerChange)
                     }
 
-                    playerChangesMap.forEach((paths, playerIndex) => {
+                    playerChangesMap.forEach((change, playerIndex) => {
                         const playerId = this.gameState.privateState?.playersStates![playerIndex]?.playerId!
                         const playerSync = this.playerPrivateStateSync.get(playerId)
-                        const stringPaths = paths.map(path => path.join('.'))
-                        playerSync?.sendUpdate(stringPaths)
+                        playerSync?.sendPropChanges(change)
                     })
                 }
 

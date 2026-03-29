@@ -1,6 +1,7 @@
 import EventEmitter from 'eventemitter3';
 import _ from 'lodash';
 import { typedPath, type TypedPathWrapper } from 'typed-path';
+import type { PropChange } from '../utils/proxyObject';
 import type { P2PConnection, PeerFilter } from './p2p';
 
 interface ObjectSyncPart {
@@ -142,6 +143,22 @@ export class ObjectSync<T extends object> extends EventEmitter<ObjectSyncEvents>
                 }
             ]
         }
+        const updateMessage: ObjectSyncMessage = {
+            type: 'ObjectSyncMessage',
+            objectId: this.id,
+            parts: parts
+        }
+        this.sendMessage(updateMessage, peerFilter)
+    }
+
+    sendPropChanges(changes: PropChange[], peerFilter: string | PeerFilter | null = null) {
+        const parts = changes.map(change => {
+            const part: ObjectSyncPart = {
+                path: change.path.join('.'),
+                value: change.value
+            }
+            return part
+        })
         const updateMessage: ObjectSyncMessage = {
             type: 'ObjectSyncMessage',
             objectId: this.id,

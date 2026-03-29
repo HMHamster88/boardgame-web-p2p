@@ -4,7 +4,7 @@
             <div class="flex justify-center items-center gap-4 mb-8">
                 <div class="flex flex-col gap-1" style="width: 50%;">
                     {{ t('playerOffer') }}
-                    <div v-for="resource in playerTradeOffer?.offered" class="flex justify-center gap-2">
+                    <div v-for="resource in nonNullOffered" class="flex justify-center gap-2">
                         <img class="resource-icon" :src="resourcesImages[resource.type]">
                         </img>
                         <span class="m-1">{{ resource.count }}</span>
@@ -15,11 +15,12 @@
                 </div>
                 <div class="flex flex-col gap-1" style="width: 50%;">
                     {{ t('playerWants') }}
-                    <div v-for="resource in playerTradeOffer?.required" class="flex justify-center gap-2 "
+                    <div v-for="resource in nonNullRequired" class="flex justify-center gap-2 "
                         :class="{ 'opacity-40': !hasResources(resource) }">
                         <img class="resource-icon" :src="resourcesImages[resource.type]">
                         </img>
-                        <span class="m-1">{{ resource.count }}</span>
+                        <span class="m-1">{{ resource.count + '/' + getByType(availableResources,
+                            resource.type)?.count }}</span>
                     </div>
                 </div>
             </div>
@@ -83,6 +84,21 @@ const canAccept = computed(() => {
         return req.count <= aResource.count
     })
 })
+
+const nonNullOffered = computed(() => {
+    if (!props.playerTradeOffer) {
+        return []
+    }
+    return props.playerTradeOffer?.offered.filter(rc => rc.count > 0)
+})
+
+const nonNullRequired = computed(() => {
+    if (!props.playerTradeOffer) {
+        return []
+    }
+    return props.playerTradeOffer?.required.filter(rc => rc.count > 0)
+})
+
 
 const playerName = computed(() => {
     return props.players.find(pl => pl.userId == props.playerTradeOffer?.playerId)

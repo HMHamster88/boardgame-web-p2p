@@ -1,21 +1,35 @@
 export type Prop = string | symbol
 export type PropPath = Prop[]
+export interface PropChange {
+    path: PropPath,
+    value: any
+}
 
-export function getSubObjectPaths(paths: PropPath[], begining: Prop[]): PropPath[] {
-    return paths.filter(path => {
-        if (path.length < begining.length) {
+export function getSubObjectChanges(changes: PropChange[], begining: Prop[]): PropChange[] {
+    return changes.filter(change => {
+        if (change.path.length < begining.length) {
             return false
         }
         for (let i = 0; i < begining.length; i++) {
-            if (path[i] != begining[i]) {
+            if (change.path[i] != begining[i]) {
                 return false
             }
         }
         return true
-    }).map(path => path.slice(begining.length) as PropPath)
+    }).map(change => {
+        const newChange: PropChange = {
+            path: change.path.slice(begining.length),
+            value: change.value
+        }
+        return newChange
+    })
 }
 
-export function createDeepProxy<T extends object>(target: T, callback: (path: PropPath, value: any) => void, path: PropPath = []): T {
+export function watchChagesList<T extends object>(target: T, changeList: PropChange[], path: PropPath = []): T {
+    return createDeepProxy(target, (change) => changeList.push(change), path)
+}
+
+export function createDeepProxy<T extends object>(target: T, callback: (change: PropChange) => void, path: PropPath = []): T {
     const proxyCache = new WeakMap();
     return new Proxy(
         target, {
@@ -33,8 +47,8 @@ export function createDeepProxy<T extends object>(target: T, callback: (path: Pr
         },
         set(target, property, newValue) {
             Reflect.set(target, property, newValue)
-            const fullPath = [...path, property]
-            callback(fullPath, newValue);
+            const fullPath = [...path, property] as PropPath
+            callback({ path: fullPath, value: newValue });
             return true;
         }
     });
