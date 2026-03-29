@@ -19,6 +19,8 @@ export function getService(): GameService {
 }
 
 export class CahService implements GameService {
+    readonly automaticSync = false
+
     localization: any = {
         en: {
             CARDS_AGAINST_HUMANITY: 'Cards Against Humanity'

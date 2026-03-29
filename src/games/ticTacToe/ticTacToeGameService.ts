@@ -16,6 +16,8 @@ export function getService(): GameService {
 }
 
 export class TicTacToeGameService implements GameService {
+    readonly automaticSync = false
+
     localization: any = {
         en: {
             TIC_TAC_TOE: 'Tic Tac Toe'

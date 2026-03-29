@@ -21,6 +21,7 @@ export interface GameService {
     readonly gameType: string
     readonly gameName: string
     readonly localization: any
+    readonly automaticSync: boolean
 }
 
 
