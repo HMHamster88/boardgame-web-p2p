@@ -24,10 +24,10 @@
 
         </div>
         <div class="flex justify-center gap-3">
-            <div class="flex overflow-auto">
-                <div v-for="resource in resources" class="flex">
-                    <img class="resource-icon" :src="resourcesImages[resource.type]"></img>
-                    <span class="m-1">{{ resource.count }}</span>
+            <div class="flex overflow-auto gap-2">
+                <div v-for="[resourceType, resourceCount] in recordEntries(resources)" class="flex">
+                    <img class="resource-icon" :src="resourcesImages[resourceType]"></img>
+                    <span class="m-1">{{ resourceCount }}</span>
                 </div>
             </div>
         </div>
@@ -37,12 +37,12 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, type PropType } from 'vue';
-import { rangeArray, removeElement } from '../../../utils/arrayUtils';
-import { developmentCardIsUsable, type CatanDevelopmentCardType, type CatanResourceCount, type CatanResourceType } from '../types/types';
+import { rangeArray, recordEntries, removeElement } from '../../../utils/arrayUtils';
+import { developmentCardIsUsable, initResources, type CatanDevelopmentCardType, type CatanResources } from '../types/types';
 import DevelopmentCardDialog from './DevelopmentCardDialog.vue';
 import { developmentCardsImgs, resourceCardsImg, resourcesImages } from './graphics';
 
-const model = defineModel<CatanResourceCount[]>()
+const model = defineModel<CatanResources>()
 
 const selectedCardsInds = ref<number[]>([])
 function cardClick(index: number) {
@@ -57,21 +57,12 @@ function cardClick(index: number) {
 }
 
 function getSelectedResources() {
-    const counts: any = {}
+    const resources = initResources({})
     for (let index of selectedCardsInds.value) {
         const resurceType = flatResources.value[index]!
-        if (counts[resurceType]) {
-            counts[resurceType]++
-        } else {
-            counts[resurceType] = 1
-        }
+        resources[resurceType]++
     }
-    return Object.entries(counts).map(([name, matches]) => {
-        return {
-            type: name as CatanResourceType,
-            count: matches as number
-        } as CatanResourceCount
-    })
+    return resources
 }
 
 const devCardDialog = useTemplateRef('devCardDialog')
@@ -89,7 +80,7 @@ const emit = defineEmits<{
 
 const props = defineProps({
     resources: {
-        type: Object as PropType<CatanResourceCount[]>,
+        type: Object as PropType<CatanResources>,
         required: true
     },
     developmentCards: {
@@ -103,7 +94,7 @@ const props = defineProps({
 })
 
 const flatResources = computed(() => {
-    return props.resources.flatMap(resource => rangeArray(resource.count).map(() => resource.type))
+    return recordEntries(props.resources).flatMap(([resourceType, resourceCount]) => rangeArray(resourceCount).map(() => resourceType))
 })
 
 </script>

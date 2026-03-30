@@ -8,7 +8,7 @@ import type { ObjectSync } from '../../p2p/objectSync';
 import type GameHost from '../../services/gameHost';
 import type { GameService } from "../../services/gameService/gameService";
 import { handleMessage, type GameAction, type MesasgeHandlers } from "../../services/messages";
-import { getShuffledArray, randomElement, rangeArray, recordAsArray, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
+import { getShuffledArray, randomEnumVal, rangeArray, recordAsArray, recordEntries, removeCopmarableElements, removeElement } from '../../utils/arrayUtils';
 import { sleep } from '../../utils/functionUtils';
 import { findByCoordsArray, getEdgeNeighborhoodsPositions, getHexEdgesPositions, getHexVerticesPositions, getVertexHexesPositions, isOutEdge } from '../commonTypes/hex-grid/geometry';
 import { Vector2D } from '../commonTypes/vector2d';
@@ -36,10 +36,12 @@ import {
     CatanDiceValue,
     CatanGamePhase,
     CatanIntersectionObjectType,
+    CatanResourceType,
     CatanTradeType,
     developmentCardSaves,
     developmentCardsCount,
     getBuyItems,
+    initResources,
     intersectionObjectRoBuyItem,
     type CatanField,
     type CatanGameSettings,
@@ -49,7 +51,7 @@ import {
     type CatanPlayerPublicState,
     type CatanPrivateGameState,
     type CatanPublicGameState,
-    type CatanResourceCount,
+    type CatanResources,
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
@@ -127,7 +129,7 @@ export class CatanGameService implements GameService {
         const privatePlayerStates = game.players.map(player => {
             const state: CatanPlayerPrivateState = {
                 playerId: player.userId,
-                resources: [],
+                resources: initResources({}),
                 discardCardsCount: 0,
                 developmentCards: [],
                 freeBuildings: []
@@ -293,11 +295,10 @@ export class CatanGameService implements GameService {
                         .flatMap(int => int.intersectionObjects)
                     intObjects.forEach(intObject => {
                         const resources = this.getHexResources(hex.type, intObject.type)
-                        if (resources.length) {
-                            const playerState = privateState.playersStates.find(player => player.playerId == intObject.playerId)!
-                            this.addResources(playerState, resources)
-                            playersUpdateId.push(playerState.playerId)
-                        }
+                        const playerState = privateState.playersStates.find(player => player.playerId == intObject.playerId)!
+                        this.addResources(playerState, resources)
+                        playersUpdateId.push(playerState.playerId)
+
                     })
                 }
 
@@ -309,7 +310,7 @@ export class CatanGameService implements GameService {
                 }
 
                 const freeRoad = activePlayerPrivteState.freeBuildings?.find(building => building == CatanBuyItemType.ROAD)
-                const resources = freeRoad ? [] : getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
+                const resources = freeRoad ? initResources({}) : getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
                 if (!this.checkPlayerHasResources(activePlayerPrivteState, resources)) {
                     return
                 }
@@ -398,13 +399,12 @@ export class CatanGameService implements GameService {
                 if (action.playerToRob) {
                     const playerToRob = privateState.playersStates.find(ps => ps.playerId == action.playerToRob)!
                     if (getAllResourcesCount(playerToRob?.resources) > 0) {
-                        const resCount = randomElement(playerToRob.resources)!
-                        const resourceRob: CatanResourceCount = {
-                            type: resCount.type,
-                            count: 1
-                        }
-                        this.removeResources(playerToRob, [resourceRob])
-                        this.addResources(privatePlayerState, [resourceRob])
+                        const resourceType = randomEnumVal(CatanResourceType)
+                        const resourceRob = initResources({
+                            [resourceType]: 1
+                        })
+                        this.removeResources(playerToRob, resourceRob)
+                        this.addResources(privatePlayerState, resourceRob)
                     }
                 }
 
@@ -491,61 +491,53 @@ export class CatanGameService implements GameService {
         return 7
     }
 
-    checkPlayerHasResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]): boolean {
-        for (let resource of resources) {
-            let playerResource = playerState.resources.find(rc => rc.type == resource.type)
+    checkPlayerHasResources(playerState: CatanPlayerPrivateState, resources: CatanResources): boolean {
+        for (let [resourceType, resourceCount] of recordEntries(resources)) {
+            let playerResource = playerState.resources[resourceType]
             if (!playerResource) {
                 return false
             }
-            if (playerResource.count < resource.count) {
+            if (playerResource < resourceCount) {
                 return false
             }
         }
         return true
     }
 
-    removeResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]): boolean {
+    removeResources(playerState: CatanPlayerPrivateState, resources: CatanResources): boolean {
         if (!this.checkPlayerHasResources(playerState, resources)) {
             return false
         }
 
-        for (let resource of resources) {
-            let playerResource = playerState.resources.find(rc => rc.type == resource.type)!
-            playerResource.count -= resource.count
+        for (let [resourceType, resourceCount] of recordEntries(resources)) {
+            playerState.resources[resourceType] -= resourceCount
         }
 
         return true
     }
 
-    addResources(playerState: CatanPlayerPrivateState, resources: CatanResourceCount[]) {
-        for (let resource of resources) {
-            let playerResource = playerState.resources.find(rc => rc.type == resource.type)
-            if (!playerResource) {
-                playerState.resources.push(resource)
-            } else {
-                playerResource.count += resource.count
-            }
+    addResources(playerState: CatanPlayerPrivateState, resources: CatanResources) {
+        for (let [resourceType, resourceCount] of recordEntries(resources)) {
+            playerState.resources[resourceType] += resourceCount
         }
     }
 
-    getHexResources(hex: CatanTerrainHexType, objectType: CatanIntersectionObjectType): CatanResourceCount[] {
+    getHexResources(hex: CatanTerrainHexType, objectType: CatanIntersectionObjectType): CatanResources {
         const mainResource = CatanTerrainHexType.props[hex].mainResource
         if (!mainResource) {
-            return []
+            return initResources({})
         }
 
         if (objectType == CatanIntersectionObjectType.SETTLEMENT) {
-            return [{
-                type: mainResource,
-                count: 1
-            }]
+            return initResources({
+                [mainResource]: 1
+            })
         } else if (objectType == CatanIntersectionObjectType.CITY) {
-            return [{
-                type: mainResource,
-                count: 2
-            }]
+            return initResources({
+                [mainResource]: 2
+            })
         }
-        return []
+        return initResources({})
     }
 
     generateField(fieldType: CatanGameFieldType): CatanField {

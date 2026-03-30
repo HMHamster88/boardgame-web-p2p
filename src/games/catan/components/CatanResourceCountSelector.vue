@@ -3,7 +3,7 @@
         <Button icon="pi pi-minus" v-on:click="decrease()" :disabled="!cadDecrease"></Button>
         <img class="resource-icon" :src="resourcesImages[resourceType]">
         </img>
-        <span class="m-1">{{ available ? `${model}/${available}` : model }}</span>
+        <span class="m-1">{{ available != undefined ? `${model}/${available}` : model }}</span>
         <Button icon="pi pi-plus" v-on:click="increase()" :disabled="!canIncrease"></Button>
     </div>
 </template>

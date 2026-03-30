@@ -1,17 +1,15 @@
-import { getByType } from "../../../utils/arrayUtils";
+import { recordEntries, recordForeach as recordForEach } from "../../../utils/arrayUtils";
 import { findByCoordsArray, getVertexEdgesPositions } from "../../commonTypes/hex-grid/geometry";
 import {
     catanHarbourResourceType,
     CatanIntersectionObjectType,
-    CatanResourceType,
     CatanTradeType,
+    initResourcePrices,
     type CatanField,
-    type CatanResourceCount,
-    type CatanResourcePrice,
+    type CatanResourcePrices,
+    type CatanResources,
     type CatanTradeDeal
 } from "./types";
-
-const resourceTypes = Object.keys(CatanResourceType).map(v => v as CatanResourceType)
 
 export const loaclityTypes = [CatanIntersectionObjectType.CITY, CatanIntersectionObjectType.SETTLEMENT]
 
@@ -21,14 +19,8 @@ export function getPlayerLocalities(field: CatanField, playerId: string) {
     )
 }
 
-export function getPlayerPrices(field: CatanField, playerId: string): CatanResourcePrice[] {
-    const result = resourceTypes.map(type => {
-        const price: CatanResourcePrice = {
-            type: type,
-            price: 4
-        }
-        return price
-    })
+export function getPlayerPrices(field: CatanField, playerId: string): CatanResourcePrices {
+    const result = initResourcePrices({}, 4)
     const locals = getPlayerLocalities(field, playerId)
     const localsPositions = locals.map(loc => loc.position)
     for (let localPos of localsPositions) {
@@ -37,10 +29,9 @@ export function getPlayerPrices(field: CatanField, playerId: string): CatanResou
         for (let harbour of harbours) {
             const resourceType = catanHarbourResourceType[harbour.type]
             if (!resourceType) {
-                result.forEach(rp => rp.price = Math.min(rp.price, 3))
+                recordForEach(result, (k, v) => result[k] = Math.min(v, 3))
             } else {
-                const resourcePrice = getByType(result, resourceType)!
-                resourcePrice.price = Math.min(resourcePrice.price, 2)
+                result[resourceType] = Math.min(result[resourceType], 2)
             }
         }
     }
@@ -48,27 +39,27 @@ export function getPlayerPrices(field: CatanField, playerId: string): CatanResou
     return result
 }
 
-export function getAllResourcesCount(resources: CatanResourceCount[]) {
-    return resources.map(resource => resource.count).reduce((a, c) => a + c, 0)
+export function getAllResourcesCount(resources: CatanResources) {
+    return Object.values(resources).reduce((a, c) => a + c, 0)
 }
 
-export function checkDeal(deal: CatanTradeDeal, resourcePrices: CatanResourcePrice[], availableResources: CatanResourceCount[]) {
+export function checkDeal(deal: CatanTradeDeal, resourcePrices: CatanResourcePrices, availableResources: CatanResources) {
     if (getAllResourcesCount(deal.offered) == 0 || getAllResourcesCount(deal.required) == 0) {
         return false
     }
     if (deal.type == CatanTradeType.BANK) {
         let allOfferCount = 0
-        for (let offer of deal.offered) {
-            const price = getByType(resourcePrices, offer.type)!
-            if (offer.count % price.price != 0) {
+        for (let [offerKey, offerCount] of recordEntries(deal.offered)) {
+            const price = resourcePrices[offerKey]
+            if (offerCount % price != 0) {
                 return false
             }
-            if (offer.count > 0) {
-                const availableResource = getByType(availableResources, offer.type)
-                if (!availableResource || offer.count > availableResource.count) {
+            if (offerCount > 0) {
+                const availableResource = availableResources[offerKey]
+                if (!availableResource || offerCount > availableResource) {
                     return false
                 }
-                allOfferCount += offer.count / price.price
+                allOfferCount += offerCount / price
             }
         }
         return allOfferCount == getAllResourcesCount(deal.required)

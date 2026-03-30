@@ -1,5 +1,6 @@
 import type { GameSettings } from "../../../db/game";
 import type { GamePrivateState, GamePublicState, PlayerPrivateState, PlayerPublicState } from "../../../db/gameState";
+import { initEnumRecord } from "../../../utils/arrayUtils";
 import type { Vector2DLike } from "../../commonTypes/vector2d";
 import type { CatanGameFieldType } from "./catanGameFieldType";
 import type { CatanTerrainHexType } from "./catanTerrainHexType";
@@ -161,8 +162,8 @@ export interface CatanDices {
 
 export interface CatanPlayerTradeOffer {
     playerId: string,
-    offered: CatanResourceCount[]
-    required: CatanResourceCount[],
+    offered: CatanResources
+    required: CatanResources,
     rejectedPlayerIds: string[]
 }
 
@@ -174,14 +175,16 @@ export interface CatanPublicGameState extends GamePublicState {
     playerTradeOffer: CatanPlayerTradeOffer | undefined
 }
 
-export interface CatanResourceCount {
-    type: CatanResourceType,
-    count: number
+export type CatanResources = Record<CatanResourceType, number>
+
+export function initResources(intVal: Partial<Record<CatanResourceType, number>>): CatanResources {
+    return initEnumRecord<CatanResourceType, number>(CatanResourceType, intVal, 0)
 }
 
-export interface CatanResourcePrice {
-    type: CatanResourceType,
-    price: number
+export type CatanResourcePrices = Record<CatanResourceType, number>
+
+export function initResourcePrices(intVal: Partial<Record<CatanResourceType, number>>, defaultValue: number): CatanResourcePrices {
+    return initEnumRecord<CatanResourceType, number>(CatanResourceType, intVal, defaultValue)
 }
 
 export enum CatanTradeType {
@@ -191,12 +194,12 @@ export enum CatanTradeType {
 
 export interface CatanTradeDeal {
     type: CatanTradeType
-    offered: CatanResourceCount[]
-    required: CatanResourceCount[]
+    offered: CatanResources
+    required: CatanResources
 }
 
 export interface CatanPlayerPrivateState extends PlayerPrivateState {
-    resources: CatanResourceCount[]
+    resources: CatanResources
     developmentCards: CatanDevelopmentCardType[]
     discardCardsCount: number,
     freeBuildings: CatanBuyItemType[]
@@ -225,74 +228,41 @@ export function intersectionObjectRoBuyItem(item: CatanIntersectionObjectType): 
 
 export interface CatanBuyItem {
     type: CatanBuyItemType
-    resources: CatanResourceCount[]
+    resources: CatanResources
 }
 
 export function getBuyItems(): CatanBuyItem[] {
     return [
         {
             type: CatanBuyItemType.ROAD,
-            resources: [
-                {
-                    type: CatanResourceType.WOOD,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.CLAY,
-                    count: 1
-                }
-            ]
+            resources: initResources({
+                [CatanResourceType.WOOD]: 1,
+                [CatanResourceType.CLAY]: 1,
+            })
         },
         {
             type: CatanBuyItemType.SETTLEMENT,
-            resources: [
-                {
-                    type: CatanResourceType.WOOD,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.CLAY,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.GRAIN,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.WOOL,
-                    count: 1
-                }
-            ]
+            resources: initResources({
+                [CatanResourceType.WOOD]: 1,
+                [CatanResourceType.CLAY]: 1,
+                [CatanResourceType.GRAIN]: 1,
+                [CatanResourceType.WOOL]: 1,
+            })
         },
         {
             type: CatanBuyItemType.CITY,
-            resources: [
-                {
-                    type: CatanResourceType.GRAIN,
-                    count: 2
-                },
-                {
-                    type: CatanResourceType.ORE,
-                    count: 3
-                }
-            ]
+            resources: initResources({
+                [CatanResourceType.GRAIN]: 2,
+                [CatanResourceType.ORE]: 3,
+            })
         },
         {
             type: CatanBuyItemType.DEVELOPMENT_CARD,
-            resources: [
-                {
-                    type: CatanResourceType.GRAIN,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.WOOL,
-                    count: 1
-                },
-                {
-                    type: CatanResourceType.ORE,
-                    count: 1
-                }
-            ]
+            resources: initResources({
+                [CatanResourceType.GRAIN]: 1,
+                [CatanResourceType.WOOL]: 1,
+                [CatanResourceType.ORE]: 1,
+            })
         }
     ]
 }

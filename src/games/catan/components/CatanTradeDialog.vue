@@ -7,14 +7,12 @@
                 <div class="flex flex-col gap-1">
                     {{ t('myOffer') }}
                     <div v-for="resourceType in resourceTypes" class="flex items-center gap-2">
-                        <CatanResourceCountSelector :resourceType="resourceType"
-                            v-model="getByType(deal.offered, resourceType)!.count"
+                        <CatanResourceCountSelector :resourceType="resourceType" v-model="deal.offered[resourceType]"
                             :step="step(deal.type, resourceType, resourcePrices)"
-                            :max="getByType(availableResources, resourceType)?.count"
-                            :available="getByType(availableResources, resourceType)?.count">
+                            :max="availableResources[resourceType]" :available="availableResources[resourceType]">
                         </CatanResourceCountSelector>
                         <span v-if="deal.type == CatanTradeType.BANK" class="text-nowrap">
-                            {{ getByType(resourcePrices, resourceType)?.price }} : 1
+                            {{ resourcePrices[resourceType] }} : 1
                         </span>
                     </div>
                 </div>
@@ -24,8 +22,7 @@
                 <div class="flex flex-col gap-1">
                     {{ t('iWant') }}
                     <div v-for="resourceType in resourceTypes">
-                        <CatanResourceCountSelector :resourceType="resourceType"
-                            v-model="getByType(deal.required, resourceType)!.count">
+                        <CatanResourceCountSelector :resourceType="resourceType" v-model="deal.required[resourceType]">
                         </CatanResourceCountSelector>
                     </div>
                 </div>
@@ -42,8 +39,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getByType } from '../../../utils/arrayUtils';
-import { CatanResourceType, CatanTradeType, type CatanResourceCount, type CatanResourcePrice, type CatanTradeDeal } from '../types/types';
+import { CatanResourceType, CatanTradeType, initResourcePrices, initResources, type CatanResourcePrices, type CatanResources, type CatanTradeDeal } from '../types/types';
 import { checkDeal } from '../types/utils';
 import CatanResourceCountSelector from './CatanResourceCountSelector.vue';
 
@@ -73,23 +69,13 @@ const { t } = useI18n({
 
 const resourceTypes = ref(Object.keys(CatanResourceType).map(v => v as CatanResourceType))
 
-const availableResources = ref<CatanResourceCount[]>([])
+const availableResources = ref<CatanResources>(initResources({}))
 
 function deafutlDeal() {
     const deal: CatanTradeDeal = {
         type: CatanTradeType.BANK,
-        offered: resourceTypes.value.map(type => {
-            return {
-                type: type,
-                count: 0
-            }
-        }),
-        required: resourceTypes.value.map(type => {
-            return {
-                type: type,
-                count: 0
-            }
-        })
+        offered: initResources({}),
+        required: initResources({})
     }
     return deal
 }
@@ -104,8 +90,8 @@ function resetDeal() {
     Object.assign(deal.value, defaultDeal)
 }
 
-function step(dealType: CatanTradeType, resourceType: CatanResourceType, resourcePrices: CatanResourcePrice[]) {
-    return dealType == CatanTradeType.BANK ? resourcePrices.find(p => p.type == resourceType)?.price : 1
+function step(dealType: CatanTradeType, resourceType: CatanResourceType, resourcePrices: CatanResourcePrices) {
+    return dealType == CatanTradeType.BANK ? resourcePrices[resourceType] : 1
 }
 
 watch(() => deal.value.type, () => {
@@ -114,19 +100,13 @@ watch(() => deal.value.type, () => {
 
 const showDialog = ref(false)
 
-const resourcePrices = ref(resourceTypes.value.map(type => {
-    const price: CatanResourcePrice = {
-        type: type,
-        price: 4
-    }
-    return price
-}))
+const resourcePrices = ref(initResourcePrices({}, 4))
 
 var openPromise: Promise<CatanTradeDeal | undefined>
 
 var openPromiseResolve: (deal: CatanTradeDeal | undefined) => void
 
-async function open(availableResourcesParam: CatanResourceCount[], resourcePricesParam: CatanResourcePrice[]): Promise<CatanTradeDeal | undefined> {
+async function open(availableResourcesParam: CatanResources, resourcePricesParam: CatanResourcePrices): Promise<CatanTradeDeal | undefined> {
     resetDeal()
     availableResources.value = availableResourcesParam
     resourcePrices.value = resourcePricesParam

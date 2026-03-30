@@ -58,7 +58,7 @@ import { useI18n } from 'vue-i18n';
 import SelectPlayersDialog from '../../../components/SelectPlayersDialog.vue';
 import type Game from '../../../db/game';
 import type { GameAction } from '../../../services/messages';
-import { rangeArray, removeElement } from '../../../utils/arrayUtils';
+import { rangeArray, recordEntries, recordValues, removeElement } from '../../../utils/arrayUtils';
 import {
     findByCoords,
     getEdgeNeighborhoodsPositions,
@@ -90,11 +90,12 @@ import {
     CatanGamePhase,
     CatanIntersectionObjectType,
     getBuyItems,
+    initResources,
     type CatanBuyItem,
     type CatanDices, type CatanIntersection,
     type CatanPlayerPrivateState,
     type CatanPublicGameState,
-    type CatanResourceCount,
+    type CatanResources,
     type CatanRoad,
     type CatanTerrainHex
 } from '../types/types';
@@ -272,7 +273,7 @@ async function hexClick(hex: CatanTerrainHex) {
     }
 }
 
-const selectedResorceCards = ref<CatanResourceCount[]>([])
+const selectedResorceCards = ref<CatanResources>(initResources({}))
 
 function discardCards() {
     if (discardCardsEnabled) {
@@ -280,7 +281,7 @@ function discardCards() {
             type: 'CatanDiscardResourceCards',
             resources: selectedResorceCards.value
         })
-        selectedResorceCards.value = []
+        selectedResorceCards.value = initResources({})
     }
 }
 
@@ -289,7 +290,8 @@ const needToDiscardCards = computed(() => {
 })
 
 const discardCardsEnabled = computed(() => {
-    return props.playerPrivateState.discardCardsCount == selectedResorceCards.value.map(resource => resource.count).reduce((a, c) => a + c, 0)
+    const selectedCardsCount = recordValues(selectedResorceCards.value).reduce((a, c) => a + c, 0)
+    return props.playerPrivateState.discardCardsCount == selectedCardsCount
 })
 
 const buildItemType = ref<CatanBuyItemType | undefined>()
@@ -326,12 +328,9 @@ function buyItemClick(item: CatanBuyItem) {
 }
 
 function canBuyItem(item: CatanBuyItem): boolean {
-    return item.resources.every(itemResource => {
-        const playerResource = props.playerPrivateState.resources.find(res => res.type == itemResource.type)
-        if (!playerResource) {
-            return false
-        }
-        return playerResource.count >= itemResource.count
+    return recordEntries(item.resources).every(([resourceType, resourceCount]) => {
+        const playerResource = props.playerPrivateState.resources[resourceType]
+        return playerResource >= resourceCount
     })
 }
 
@@ -350,8 +349,8 @@ const canBuy = computed<boolean>(() => {
     return (props.gameState.phase == CatanGamePhase.PLAYER_TURN) && isLocalPlayerTurn.value
 })
 
-function getFlatResources(resources: CatanResourceCount[]) {
-    return resources.flatMap(resouce => rangeArray(resouce.count).map(_ => resouce.type))
+function getFlatResources(resources: CatanResources) {
+    return recordEntries(resources).flatMap(([resourceType, resourceCount]) => rangeArray(resourceCount).map(() => resourceType))
 }
 
 const canRollDices = computed<boolean>(() => {

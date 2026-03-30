@@ -4,10 +4,10 @@
             <div class="flex justify-center items-center gap-4 mb-8">
                 <div class="flex flex-col gap-1" style="width: 50%;">
                     {{ t('playerOffer') }}
-                    <div v-for="resource in nonNullOffered" class="flex justify-center gap-2">
-                        <img class="resource-icon" :src="resourcesImages[resource.type]">
+                    <div v-for="[resourceType, resourceCount] in nonNullOffered" class="flex justify-center gap-2">
+                        <img class="resource-icon" :src="resourcesImages[resourceType]">
                         </img>
-                        <span class="m-1">{{ resource.count }}</span>
+                        <span class="m-1">{{ resourceCount }}</span>
                     </div>
                 </div>
                 <div class="flex items-center">
@@ -15,12 +15,11 @@
                 </div>
                 <div class="flex flex-col gap-1" style="width: 50%;">
                     {{ t('playerWants') }}
-                    <div v-for="resource in nonNullRequired" class="flex justify-center gap-2 "
-                        :class="{ 'opacity-40': !hasResources(resource) }">
-                        <img class="resource-icon" :src="resourcesImages[resource.type]">
+                    <div v-for="[resourceType, resourceCount] in nonNullRequired" class="flex justify-center gap-2 "
+                        :class="{ 'opacity-40': !hasResources(resourceType) }">
+                        <img class="resource-icon" :src="resourcesImages[resourceType]">
                         </img>
-                        <span class="m-1">{{ resource.count + '/' + getByType(availableResources,
-                            resource.type)?.count }}</span>
+                        <span class="m-1">{{ resourceCount + '/' + availableResources[resourceType] }}</span>
                     </div>
                 </div>
             </div>
@@ -36,8 +35,8 @@
 import { computed, type PropType } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Player } from '../../../db/player'
-import { getByType } from '../../../utils/arrayUtils'
-import type { CatanPlayerTradeOffer, CatanResourceCount } from '../types/types'
+import { filterRecord, partialRecordEntries, recordEntries } from '../../../utils/arrayUtils'
+import { type CatanPlayerTradeOffer, type CatanResources, type CatanResourceType } from '../types/types'
 import { resourcesImages } from './graphics'
 
 let localization: any = {
@@ -57,31 +56,31 @@ const { t } = useI18n({
     messages: localization
 })
 
-function hasResources(reqResource: CatanResourceCount) {
+function hasResources(resourceType: CatanResourceType) {
     if (!props.availableResources || !props.playerTradeOffer) {
         return false
     }
-
-    const availableResource = getByType(props.availableResources, reqResource.type)
+    const availableResource = props.availableResources[resourceType]
+    const reqResource = props.playerTradeOffer.required[resourceType]
     if (!reqResource || !availableResource) {
         return false
     }
-    return availableResource.count >= reqResource.count
+    return availableResource >= reqResource
 }
 
 const canAccept = computed(() => {
     if (!props.availableResources || !props.playerTradeOffer) {
         return false
     }
-    return props.playerTradeOffer?.required.every(req => {
-        if (req.count == 0) {
+    return recordEntries(props.playerTradeOffer?.required).every(([type, count]) => {
+        if (count == 0) {
             return true
         }
-        const aResource = getByType(props.availableResources, req.type)
+        const aResource = props.availableResources[type]
         if (!aResource) {
-            return
+            return false
         }
-        return req.count <= aResource.count
+        return count <= aResource
     })
 })
 
@@ -89,14 +88,14 @@ const nonNullOffered = computed(() => {
     if (!props.playerTradeOffer) {
         return []
     }
-    return props.playerTradeOffer?.offered.filter(rc => rc.count > 0)
+    return partialRecordEntries(filterRecord(props.playerTradeOffer.offered, (_, count) => count != 0))
 })
 
 const nonNullRequired = computed(() => {
     if (!props.playerTradeOffer) {
         return []
     }
-    return props.playerTradeOffer?.required.filter(rc => rc.count > 0)
+    return partialRecordEntries(filterRecord(props.playerTradeOffer?.required, (_, count) => count != 0))
 })
 
 
@@ -129,7 +128,7 @@ const emit = defineEmits({
 
 const props = defineProps({
     availableResources: {
-        type: Object as PropType<CatanResourceCount[]>,
+        type: Object as PropType<CatanResources>,
         required: true
     },
     playerTradeOffer: {
