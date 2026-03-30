@@ -198,7 +198,8 @@ export interface CatanTradeDeal {
 export interface CatanPlayerPrivateState extends PlayerPrivateState {
     resources: CatanResourceCount[]
     developmentCards: CatanDevelopmentCardType[]
-    discardCardsCount: number
+    discardCardsCount: number,
+    freeBuildings: CatanBuyItemType[]
 }
 
 export interface CatanPrivateGameState extends GamePrivateState {

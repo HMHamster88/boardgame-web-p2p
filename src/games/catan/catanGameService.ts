@@ -129,7 +129,8 @@ export class CatanGameService implements GameService {
                 playerId: player.userId,
                 resources: [],
                 discardCardsCount: 0,
-                developmentCards: []
+                developmentCards: [],
+                freeBuildings: []
             }
             return state
         })
@@ -307,7 +308,8 @@ export class CatanGameService implements GameService {
                     return
                 }
 
-                const resources = getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
+                const freeRoad = activePlayerPrivteState.freeBuildings?.find(building => building == CatanBuyItemType.ROAD)
+                const resources = freeRoad ? [] : getBuyItems().find(item => item.type == CatanBuyItemType.ROAD)?.resources!
                 if (!this.checkPlayerHasResources(activePlayerPrivteState, resources)) {
                     return
                 }
@@ -323,7 +325,11 @@ export class CatanGameService implements GameService {
                     position: action.position
                 }
                 field.roads.push(road)
-                this.removeResources(activePlayerPrivteState, resources)
+                if (freeRoad) {
+                    removeElement(activePlayerPrivteState.freeBuildings, freeRoad)
+                } else {
+                    this.removeResources(activePlayerPrivteState, resources)
+                }
             },
             CatanBuildIntObjectAction: (action: CatanBuildIntObjectAction) => {
                 if (!isActivePlayerAction || !activePlayerPrivteState) {
@@ -460,10 +466,19 @@ export class CatanGameService implements GameService {
                 removeElement(privatePlayerState.developmentCards, action.developmentCard)
                 if (developmentCardSaves[action.developmentCard]) {
                     publicPlayerState.openedDevelopmentCards.push(action.developmentCard)
+                } else {
+                    privateState.developmentCardDiscardPile.push(action.developmentCard)
                 }
-                if (action.developmentCard == CatanDevelopmentCardType.KNIGNT) {
-                    publicState.phase = CatanGamePhase.MOVE_ROBBER
-                    return
+
+                switch (action.developmentCard) {
+                    case CatanDevelopmentCardType.KNIGNT:
+                        publicState.phase = CatanGamePhase.MOVE_ROBBER
+                        return
+                    case CatanDevelopmentCardType.BUILD_ROADS:
+                        privatePlayerState.freeBuildings.push(CatanBuyItemType.ROAD, CatanBuyItemType.ROAD)
+                        return
+                    case CatanDevelopmentCardType.MONOPOLY:
+                        return
                 }
             }
         }

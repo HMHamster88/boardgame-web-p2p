@@ -14,7 +14,7 @@
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
         <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
-            }}</Button>
+        }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
@@ -189,10 +189,22 @@ function useDevCard(devCard: CatanDevelopmentCardType) {
     })
 }
 
+const freeBuilding = computed(() => {
+    if (!props.playerPrivateState.freeBuildings) {
+        return undefined
+    }
+    return props.playerPrivateState.freeBuildings[props.playerPrivateState.freeBuildings.length - 1]
+})
+
 const status = computed(() => {
     const phase = props.gameState.phase
-    if (buildItemType.value) {
-        return t('build.' + buildItemType.value as string)
+    if (phase == CatanGamePhase.PLAYER_TURN && isLocalPlayerTurn) {
+        if (buildItemType.value) {
+            return t('build.' + buildItemType.value as string)
+        }
+        if (freeBuilding.value) {
+            return t('build.' + freeBuilding.value as string)
+        }
     }
     if (phase == CatanGamePhase.DISCARD_CARDS_7) {
         const playerPart = props.playerPrivateState.discardCardsCount > 0 ? 'localPlayer' : 'notLocalPlayer'
@@ -437,7 +449,7 @@ function roadOverlayClick(position: Vector2D) {
             props.gameState.field.roads.push(road)
             embarkData.value.road = road
         } else if (props.gameState.phase == CatanGamePhase.PLAYER_TURN) {
-            if (buildItemType.value == CatanBuyItemType.ROAD) {
+            if (buildItemType.value == CatanBuyItemType.ROAD || freeBuilding.value) {
                 let road = roadsByCoords.value.get(position)
                 if (road) {
                     return

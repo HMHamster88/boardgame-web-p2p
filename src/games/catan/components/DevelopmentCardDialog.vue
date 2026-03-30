@@ -1,8 +1,12 @@
 <template>
     <Dialog v-model:visible="showDialog" modal :header="t('developmentCard')" :closable="false">
-        <div class="flex justify-center  m-1 mb-4">
+        <div class="flex justify-center  m-1 mb-2">
             <img :src="developmentCardsImgs[developmentCard]" class="dev-card">
             </img>
+        </div>
+        <div class="flex justify-center m-1 mb-4">
+            <CatanResourceTypeSelector v-model="selectedResourceType"
+                v-if="developmentCard == CatanDevelopmentCardType.MONOPOLY"></CatanResourceTypeSelector>
         </div>
         <div class="flex justify-end gap-2">
             <Button type="button" :label="t('cancel')" severity="secondary" @click="close(false)"></Button>
@@ -14,7 +18,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CatanDevelopmentCardType, developmentCardIsUsable } from '../types/types';
+import { CatanDevelopmentCardType, CatanResourceType, developmentCardIsUsable } from '../types/types';
+import CatanResourceTypeSelector from './CatanResourceTypeSelector.vue';
 import { developmentCardsImgs } from './graphics';
 
 let localization: any = {
@@ -31,6 +36,8 @@ const { t } = useI18n({
     locale: 'en',
     messages: localization
 })
+
+const selectedResourceType = ref<CatanResourceType | undefined>()
 
 const usableCard = computed(() => {
     return developmentCardIsUsable[developmentCard.value]
