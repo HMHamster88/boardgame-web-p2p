@@ -31,14 +31,15 @@
                 </div>
             </div>
         </div>
-        <DevelopmentCardDialog ref="devCardDialog"></DevelopmentCardDialog>
+        <DevelopmentCardDialog ref="devCardDialog" :is-local-player-turn="isLocalPlayerTurn"></DevelopmentCardDialog>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, type PropType } from 'vue';
 import { rangeArray, recordEntries, removeElement } from '../../../utils/arrayUtils';
-import { developmentCardIsUsable, initResources, type CatanDevelopmentCardType, type CatanResources } from '../types/types';
+import type { CatanUseDevelopmentCardAction } from '../types/actions';
+import { initResources, type CatanDevelopmentCardType, type CatanResources } from '../types/types';
 import DevelopmentCardDialog from './DevelopmentCardDialog.vue';
 import { developmentCardsImgs, resourceCardsImg, resourcesImages } from './graphics';
 
@@ -68,13 +69,14 @@ function getSelectedResources() {
 const devCardDialog = useTemplateRef('devCardDialog')
 
 async function clickDevCard(devCard: CatanDevelopmentCardType) {
-    if (await devCardDialog.value?.open(devCard) && developmentCardIsUsable[devCard]) {
-        emit('useDevCard', devCard)
+    const action = await devCardDialog.value?.open(devCard);
+    if (action) {
+        emit('useDevCard', action)
     }
 }
 
 const emit = defineEmits<{
-    (e: 'useDevCard', card: CatanDevelopmentCardType): void
+    (e: 'useDevCard', action: CatanUseDevelopmentCardAction): void
 }>()
 
 
@@ -89,6 +91,10 @@ const props = defineProps({
     },
     openedDevelopmentCards: {
         type: Object as PropType<CatanDevelopmentCardType[]>,
+        required: true
+    },
+    isLocalPlayerTurn: {
+        type: Boolean,
         required: true
     }
 })

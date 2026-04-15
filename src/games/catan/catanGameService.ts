@@ -26,7 +26,9 @@ import {
     type CatanRollDicesAction,
     type CatanTradeAction,
     type CatanTradeResponseAction,
-    type CatanUseDevelopmentCardAction
+    type CatanUseDevelopmentCardAction,
+    type CatanUseResourceDevelopmentCardAction,
+    type CatanUseResourceTypeDevelopmentCardAction
 } from "./types/actions";
 import { CatanGameFieldType } from "./types/catanGameFieldType";
 import { CatanTerrainHexType } from "./types/catanTerrainHexType";
@@ -55,7 +57,7 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { checkDeal, getAllResourcesCount, getPlayerPrices } from './types/utils';
+import { checkDeal, getAllResourcesCount, getPlayerPrices, moveAllResourcesByType } from './types/utils';
 
 const embarkRoadsCount = 2
 
@@ -478,7 +480,15 @@ export class CatanGameService implements GameService {
                         privatePlayerState.freeBuildings.push(CatanBuyItemType.ROAD, CatanBuyItemType.ROAD)
                         return
                     case CatanDevelopmentCardType.MONOPOLY:
+                        const resourceTypeAction = action as CatanUseResourceTypeDevelopmentCardAction
+                        privateState.playersStates.filter(ps => ps.playerId != playerId)
+                            .forEach(playerState => {
+                                moveAllResourcesByType(privatePlayerState.resources, playerState.resources, resourceTypeAction.resourcesType)
+                            })
                         return
+                    case CatanDevelopmentCardType.YEAR_OF_PLENTY:
+                        const resourceAction = action as CatanUseResourceDevelopmentCardAction
+                        this.addResources(privatePlayerState, resourceAction.resources)
                 }
             }
         }

@@ -34,7 +34,8 @@
     </div>
     <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
         :resources="playerPrivateState.resources" :development-cards="playerPrivateState.developmentCards"
-        :opened-development-cards="publicPlayerState?.openedDevelopmentCards!" v-on:use-dev-card="useDevCard">
+        :opened-development-cards="publicPlayerState?.openedDevelopmentCards!" v-on:use-dev-card="useDevCard"
+        :is-local-player-turn="isLocalPlayerTurn">
     </CatanResourceCards>
 
     <SelectPlayersDialog ref="selectPlayesDialog"></SelectPlayersDialog>
@@ -85,7 +86,6 @@ import {
 import {
     buyItemToIntersectionObject,
     CatanBuyItemType,
-    CatanDevelopmentCardType,
     catanEmbarkPhases,
     CatanGamePhase,
     CatanIntersectionObjectType,
@@ -183,11 +183,8 @@ const { t } = useI18n({
     }
 })
 
-function useDevCard(devCard: CatanDevelopmentCardType) {
-    performAction<CatanUseDevelopmentCardAction>({
-        type: 'CatanUseDevelopmentCardAction',
-        developmentCard: devCard
-    })
+function useDevCard(action: CatanUseDevelopmentCardAction) {
+    performAction<CatanUseDevelopmentCardAction>(action)
 }
 
 const freeBuilding = computed(() => {

@@ -3,8 +3,10 @@ import { findByCoordsArray, getVertexEdgesPositions } from "../../commonTypes/he
 import {
     catanHarbourResourceType,
     CatanIntersectionObjectType,
+    CatanResourceType,
     CatanTradeType,
     initResourcePrices,
+    initResources,
     type CatanField,
     type CatanResourcePrices,
     type CatanResources,
@@ -65,4 +67,17 @@ export function checkDeal(deal: CatanTradeDeal, resourcePrices: CatanResourcePri
         return allOfferCount == getAllResourcesCount(deal.required)
     }
     return true
+}
+
+export function moveAllResourcesByType(destination: CatanResources, source: CatanResources, resourceType: CatanResourceType) {
+    destination[resourceType] += source[resourceType]
+    source[resourceType] = 0
+}
+
+export function resourcesByTypes(...resourceType: CatanResourceType[]) {
+    const result: CatanResources = initResources({})
+    resourceType.forEach(resourceType => {
+        result[resourceType]++
+    })
+    return result
 }
