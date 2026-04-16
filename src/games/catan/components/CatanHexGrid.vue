@@ -23,7 +23,8 @@
         </g>
 
         <g id="roads">
-            <CatanRoadComponent v-for="road in field.roads" :data="road" :hexSize="hexSize" :players="players">
+            <CatanRoadComponent v-for="road in field.roads" :data="road" :hexSize="hexSize" :players="players"
+                :isLongestRoad="isLongestRaod(road)">
             </CatanRoadComponent>
         </g>
 
@@ -47,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
+import { computed, type PropType } from 'vue';
 
 import {
     findByCoords,
@@ -61,19 +62,19 @@ import {
     vectorArrayToString
 } from '../../commonTypes/hex-grid/geometry.ts';
 
-import { terrainImages } from './graphics.ts';
-import CatanRoadComponent from './CatanRoadComponent.vue';
 import CatanIntersectionComponent from './CatanIntersectionComponent.vue';
+import CatanRoadComponent from './CatanRoadComponent.vue';
+import { terrainImages } from './graphics.ts';
 
-import CatanTerrainHexComponent from './CatanTerrainHexComponent.vue';
-import CatanHarbourComponent from './CatanHarbourComponent.vue';
-import CatanVertexOverlay from './CatanVertexOverlay.vue';
-import CatanEdgeOverlay from './CatanEdgeOverlay.vue';
-import type { CatanField, CatanHarbour, CatanTerrainHex } from '../types/types.ts';
 import type { Player } from '../../../db/player.ts';
-import { Vector2D } from '../../commonTypes/vector2d.ts';
 import { distinct, type HexGridData } from '../../commonTypes/hex-grid/hexData.ts';
-import robberImage from '../assets/robber.png'
+import { Vector2D } from '../../commonTypes/vector2d.ts';
+import robberImage from '../assets/robber.png';
+import type { CatanField, CatanHarbour, CatanRoad, CatanTerrainHex } from '../types/types.ts';
+import CatanEdgeOverlay from './CatanEdgeOverlay.vue';
+import CatanHarbourComponent from './CatanHarbourComponent.vue';
+import CatanTerrainHexComponent from './CatanTerrainHexComponent.vue';
+import CatanVertexOverlay from './CatanVertexOverlay.vue';
 
 const robberSize = computed(() => {
     return props.hexSize / 1.5
@@ -105,6 +106,13 @@ function outEdgeRotation(data: CatanHarbour) {
         return 0;
     }
     return (pointyHexToPixel(data.position, props.hexSize).x < pointyHexToPixel(hexes[0]!.position, props.hexSize).x) ? 180 : 0
+}
+
+function isLongestRaod(road: CatanRoad): boolean {
+    if (!props.longestRoad) {
+        return false
+    }
+    return props.longestRoad.find(lRoad => Vector2D.equals(lRoad.position, road.position)) != undefined
 }
 
 function hexClick(hex: CatanTerrainHex) {
@@ -177,6 +185,10 @@ const props = defineProps({
     allDiceValue: {
         type: Number,
         default: 0
+    },
+    longestRoad: {
+        type: Object as PropType<Array<CatanRoad>>,
+        required: true
     }
 })
 

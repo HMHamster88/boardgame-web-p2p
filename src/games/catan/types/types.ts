@@ -56,11 +56,23 @@ export const developmentCardIsUsable: Record<CatanDevelopmentCardType, boolean> 
     [CatanDevelopmentCardType.BUILD_ROADS]: true,
     [CatanDevelopmentCardType.MONOPOLY]: true,
     [CatanDevelopmentCardType.YEAR_OF_PLENTY]: true,
-    [CatanDevelopmentCardType.CHAPEL]: true,
-    [CatanDevelopmentCardType.GREAT_HALL]: true,
-    [CatanDevelopmentCardType.LIBRARY]: true,
-    [CatanDevelopmentCardType.MARKET]: true,
-    [CatanDevelopmentCardType.UNIVERSITY]: true
+    [CatanDevelopmentCardType.CHAPEL]: false,
+    [CatanDevelopmentCardType.GREAT_HALL]: false,
+    [CatanDevelopmentCardType.LIBRARY]: false,
+    [CatanDevelopmentCardType.MARKET]: false,
+    [CatanDevelopmentCardType.UNIVERSITY]: false
+}
+
+export const developmentCardPoints: Record<CatanDevelopmentCardType, number> = {
+    [CatanDevelopmentCardType.KNIGNT]: 0,
+    [CatanDevelopmentCardType.BUILD_ROADS]: 0,
+    [CatanDevelopmentCardType.MONOPOLY]: 0,
+    [CatanDevelopmentCardType.YEAR_OF_PLENTY]: 0,
+    [CatanDevelopmentCardType.CHAPEL]: 1,
+    [CatanDevelopmentCardType.GREAT_HALL]: 1,
+    [CatanDevelopmentCardType.LIBRARY]: 1,
+    [CatanDevelopmentCardType.MARKET]: 1,
+    [CatanDevelopmentCardType.UNIVERSITY]: 1
 }
 
 export const developmentCardSaves: Record<CatanDevelopmentCardType, boolean> = {
@@ -139,10 +151,17 @@ export interface CatanField {
 export interface CatanGameSettings extends GameSettings {
     fieldType: CatanGameFieldType
     field: CatanField
+    maxPoints: number
+}
+
+export enum CatanSpecialCard {
+    BIGGEST_ARMY = 'BIGGEST_ARMY',
+    LONGEST_ROAD = 'LONGEST_ROAD'
 }
 
 export interface CatanPlayerPublicState extends PlayerPublicState {
-    openedDevelopmentCards: CatanDevelopmentCardType[]
+    openedDevelopmentCards: CatanDevelopmentCardType[],
+    specialCards: CatanSpecialCard[]
 }
 
 export enum CatanDiceValue {
@@ -172,7 +191,8 @@ export interface CatanPublicGameState extends GamePublicState {
     phase: CatanGamePhase
     playersStates: CatanPlayerPublicState[]
     dices: CatanDices,
-    playerTradeOffer: CatanPlayerTradeOffer | undefined
+    playerTradeOffer: CatanPlayerTradeOffer | undefined,
+    longestRoad: CatanRoad[]
 }
 
 export type CatanResources = Record<CatanResourceType, number>

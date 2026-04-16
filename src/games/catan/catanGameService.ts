@@ -39,7 +39,9 @@ import {
     CatanGamePhase,
     CatanIntersectionObjectType,
     CatanResourceType,
+    CatanSpecialCard,
     CatanTradeType,
+    developmentCardPoints,
     developmentCardSaves,
     developmentCardsCount,
     getBuyItems,
@@ -57,9 +59,11 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from "./types/types";
-import { checkDeal, getAllResourcesCount, getPlayerPrices, moveAllResourcesByType } from './types/utils';
+import { checkDeal, findLongestRoad, getAllResourcesCount, getPlayerPrices, moveAllResourcesByType } from './types/utils';
 
 const embarkRoadsCount = 2
+const minLargestArmyCount = 3
+const minLongestRoadCount = 5
 
 export function getService(): GameService {
     return new CatanGameService()
@@ -90,9 +94,10 @@ export class CatanGameService implements GameService {
     createGame(props: CrateGameProps): Game {
         const settings: CatanGameSettings = {
             minPlayers: 2,
-            maxPlayers: 10,
+            maxPlayers: 6,
             fieldType: CatanGameFieldType.CLASSIC,
-            field: this.generateField(CatanGameFieldType.CLASSIC)
+            field: this.generateField(CatanGameFieldType.CLASSIC),
+            maxPoints: 10
         }
 
         return {
@@ -112,7 +117,8 @@ export class CatanGameService implements GameService {
             const state: CatanPlayerPublicState = {
                 playerId: player.userId,
                 points: 0,
-                openedDevelopmentCards: []
+                openedDevelopmentCards: [],
+                specialCards: []
             }
             return state
         })
@@ -126,7 +132,8 @@ export class CatanGameService implements GameService {
                 redDice: CatanDiceValue.ONE,
                 yellowDice: CatanDiceValue.ONE
             },
-            playerTradeOffer: undefined
+            playerTradeOffer: undefined,
+            longestRoad: []
         }
         const privatePlayerStates = game.players.map(player => {
             const state: CatanPlayerPrivateState = {
@@ -495,6 +502,91 @@ export class CatanGameService implements GameService {
 
         await handleMessage(handlers, gameAction)
 
+        const publicPlayersPoints = new Map<string, number>(
+            game.players.map(player => [player.userId, 0])
+        )
+
+        const privatePlayersPoints = new Map<string, number>(
+            game.players.map(player => [player.userId, 0])
+        )
+
+        for (let obj of publicState.field.intersections.flatMap(int => int.intersectionObjects)) {
+            switch (obj.type) {
+                case CatanIntersectionObjectType.SETTLEMENT:
+                    publicPlayersPoints.set(obj.playerId, publicPlayersPoints.get(obj.playerId)! + 1)
+                    break
+                case CatanIntersectionObjectType.CITY:
+                    publicPlayersPoints.set(obj.playerId, publicPlayersPoints.get(obj.playerId)! + 2)
+                    break
+            }
+        }
+
+        for (let privatePlayerState of privateState.playersStates) {
+            privatePlayerState.developmentCards.forEach(devCard => {
+                privatePlayersPoints.set(privatePlayerState.playerId, privatePlayersPoints.get(privatePlayerState.playerId)! + developmentCardPoints[devCard])
+            })
+        }
+
+        const biggestArmyPlayer = publicState.playersStates.reduce((prev, current) => (this.armyCount(prev) > this.armyCount(current)) ? prev : current)
+
+        if (this.armyCount(biggestArmyPlayer) >= minLargestArmyCount) {
+            const currentBiggestArmyPublicPlayer = publicState.playersStates.find(player => player.specialCards.includes(CatanSpecialCard.BIGGEST_ARMY))
+            if (!currentBiggestArmyPublicPlayer || biggestArmyPlayer == currentBiggestArmyPublicPlayer || this.armyCount(biggestArmyPlayer) > this.armyCount(currentBiggestArmyPublicPlayer)) {
+                publicPlayersPoints.set(biggestArmyPlayer.playerId, publicPlayersPoints.get(biggestArmyPlayer.playerId)! + 2)
+                if (currentBiggestArmyPublicPlayer != biggestArmyPlayer) {
+                    if (currentBiggestArmyPublicPlayer) {
+                        removeElement(currentBiggestArmyPublicPlayer.specialCards, CatanSpecialCard.BIGGEST_ARMY)
+                    }
+                    const biggestArmyPublicPlayer = publicState.playersStates.find(player => player.playerId == biggestArmyPlayer.playerId)!
+                    if (!biggestArmyPublicPlayer.specialCards.includes(CatanSpecialCard.BIGGEST_ARMY)) {
+                        publicState.playersStates.find(player => player.playerId == biggestArmyPlayer.playerId)?.specialCards.push(CatanSpecialCard.BIGGEST_ARMY)
+                    }
+                }
+            }
+        }
+
+        const longestRoad = findLongestRoad(game.players, field, minLongestRoadCount)
+
+        if (longestRoad.length >= minLongestRoadCount) {
+            const longestRoadPlayerId = longestRoad[0]?.playerId!
+            const currentLongestRoadPlayerId = publicState.longestRoad[0]?.playerId
+            const longestRoadPlayer = publicState.playersStates.find(player => player.playerId == longestRoadPlayerId)!
+            const currentLongestRoadPlayer = publicState.playersStates.find(player => player.playerId == currentLongestRoadPlayerId)
+            if (!currentLongestRoadPlayerId || longestRoadPlayerId == currentLongestRoadPlayerId || longestRoad.length > publicState.longestRoad.length) {
+                publicPlayersPoints.set(longestRoadPlayer.playerId, publicPlayersPoints.get(longestRoadPlayer.playerId)! + 2)
+                if (longestRoadPlayer != currentLongestRoadPlayer) {
+                    if (currentLongestRoadPlayer) {
+                        removeElement(currentLongestRoadPlayer.specialCards, CatanSpecialCard.LONGEST_ROAD)
+                    }
+                    if (!longestRoadPlayer.specialCards.includes(CatanSpecialCard.LONGEST_ROAD)) {
+                        longestRoadPlayer.specialCards.push(CatanSpecialCard.LONGEST_ROAD)
+                    }
+                }
+                publicState.longestRoad = _.cloneDeep(longestRoad)
+            }
+
+        }
+
+        for (let player of gameState.publicState.playersStates!) {
+            player.points = publicPlayersPoints.get(player.playerId)!
+        }
+
+        const allPoints = new Map<string, number>(
+            game.players.map(player => {
+                return [player.userId, publicPlayersPoints.get(player.userId)! + privatePlayersPoints.get(player.userId)!]
+            })
+        )
+
+        const maxPlayerPointsId = Array.from(allPoints.entries()).reduce((prev, current) => (prev[1]! > current[1]!) ? prev : current)[0]
+
+        if (allPoints.get(maxPlayerPointsId)! >= settings.maxPoints) {
+            game.status = GameStatusEnum.FINISHED
+            gameState.publicState.winnersIds = [maxPlayerPointsId!]
+        }
+    }
+
+    armyCount(playerState: CatanPlayerPublicState) {
+        return playerState.openedDevelopmentCards.filter(devCard => devCard == CatanDevelopmentCardType.KNIGNT).length
     }
 
     maxPlayerResources(_playerState: CatanPlayerPrivateState) {
@@ -504,9 +596,6 @@ export class CatanGameService implements GameService {
     checkPlayerHasResources(playerState: CatanPlayerPrivateState, resources: CatanResources): boolean {
         for (let [resourceType, resourceCount] of recordEntries(resources)) {
             let playerResource = playerState.resources[resourceType]
-            if (!playerResource) {
-                return false
-            }
             if (playerResource < resourceCount) {
                 return false
             }

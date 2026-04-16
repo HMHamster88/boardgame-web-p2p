@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed, type PropType } from 'vue'
-import { pointyHexToPixel, hexagonString } from '../../commonTypes/hex-grid/geometry.ts'
+import { hexagonString, pointyHexToPixel } from '../../commonTypes/hex-grid/geometry.ts'
 import type { CatanTerrainHex } from '../types/types.ts'
 
 const curcularTextClass = computed(() => {
@@ -63,6 +63,10 @@ const emit = defineEmits({
     stroke-width: 3px;
     stroke-linecap: butt;
     stroke-linejoin: miter;
+}
+
+.highlight {
+    fill: rgb(84, 253, 0);
 }
 
 .hex {}

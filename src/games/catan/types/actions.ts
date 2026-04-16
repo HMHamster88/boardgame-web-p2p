@@ -71,4 +71,3 @@ export interface CatanTradeResponseAction extends GameAction {
     type: 'CatanTradeResponseAction'
     accepted: boolean
 }
-

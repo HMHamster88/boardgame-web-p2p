@@ -24,7 +24,7 @@ import cityImg from '../assets/intersection-objects/city.png'
 import settlementImg from '../assets/intersection-objects/settlement.png'
 
 import { CatanTerrainHexType } from "../types/catanTerrainHexType"
-import { CatanDevelopmentCardType, CatanHarbourType, CatanIntersectionObjectType, CatanResourceType } from '../types/types'
+import { CatanDevelopmentCardType, CatanHarbourType, CatanIntersectionObjectType, CatanResourceType, CatanSpecialCard } from '../types/types'
 
 export const portImage = portImg
 export const roadImage = roadImg
@@ -38,6 +38,14 @@ import marketImg from '../assets/development-cards/market.png'
 import monopolyImg from '../assets/development-cards/monopoly.png'
 import universityImg from '../assets/development-cards/university.png'
 import yearOfPlentyImg from '../assets/development-cards/year-of-plenty.png'
+
+import biggestArmyImg from '../assets/special-cards/biggest-army.jpg'
+import longestRoadImg from '../assets/special-cards/longest-road.jpg'
+
+export const specialCardsImgs: Record<CatanSpecialCard, string> = {
+    [CatanSpecialCard.BIGGEST_ARMY]: biggestArmyImg,
+    [CatanSpecialCard.LONGEST_ROAD]: longestRoadImg
+}
 
 export const developmentCardsImgs: Record<CatanDevelopmentCardType, string> = {
     [CatanDevelopmentCardType.KNIGNT]: kinghtImg,

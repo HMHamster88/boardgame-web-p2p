@@ -20,8 +20,25 @@
                         </img>
                     </div>
                 </div>
-            </div>
 
+                <div class="flex justify-center">
+                    <div v-for="devCard in openedDevelopmentCards" class="resource-card"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <img :src="developmentCardsImgs[devCard]" class="resource-card-image" style="cursor: default;">
+
+                        </img>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <div v-for="specialCard in specialCards" class="special-card"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <img :src="specialCardsImgs[specialCard]" class="special-card-image">
+
+                        </img>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="flex justify-center gap-3">
             <div class="flex overflow-auto gap-2">
@@ -39,9 +56,9 @@
 import { computed, ref, useTemplateRef, type PropType } from 'vue';
 import { rangeArray, recordEntries, removeElement } from '../../../utils/arrayUtils';
 import type { CatanUseDevelopmentCardAction } from '../types/actions';
-import { initResources, type CatanDevelopmentCardType, type CatanResources } from '../types/types';
+import { CatanSpecialCard, initResources, type CatanDevelopmentCardType, type CatanResources } from '../types/types';
 import DevelopmentCardDialog from './DevelopmentCardDialog.vue';
-import { developmentCardsImgs, resourceCardsImg, resourcesImages } from './graphics';
+import { developmentCardsImgs, resourceCardsImg, resourcesImages, specialCardsImgs } from './graphics';
 
 const model = defineModel<CatanResources>()
 
@@ -93,6 +110,10 @@ const props = defineProps({
         type: Object as PropType<CatanDevelopmentCardType[]>,
         required: true
     },
+    specialCards: {
+        type: Object as PropType<CatanSpecialCard[]>,
+        required: true
+    },
     isLocalPlayerTurn: {
         type: Boolean,
         required: true
@@ -112,6 +133,20 @@ const flatResources = computed(() => {
     gap: 1rem;
     padding-top: 2rem;
     padding-bottom: 1rem;
+}
+
+.special-card {
+    border-radius: 4px;
+}
+
+.special-card-image {
+    border-radius: 4px;
+    border: 1px solid #8f8f8f;
+    max-width: 8rem;
+}
+
+.resource-cards-container .special-card:not(:first-child) {
+    margin-left: -4rem;
 }
 
 .resource-card {

@@ -104,12 +104,15 @@ export default class GameHost {
                 }
                 this.playerPrivateStateSync.forEach(sync => sync.updateSended = false)
 
+                const gameChanges: PropChange[] = []
+                const gameProxy = this.gameService.automaticSync ? watchChagesList(this.game, gameChanges) : this.game
+
                 const gameStateChanges: PropChange[] = []
 
                 const gameStateProxy = this.gameService.automaticSync && this.gameState ? watchChagesList(this.gameState, gameStateChanges) :
                     this.gameState
 
-                await this.gameService.performAction(this.game, gameStateProxy, message.action, peerId, this)
+                await this.gameService.performAction(gameProxy, gameStateProxy, message.action, peerId, this)
 
                 if (this.gameService.automaticSync) {
                     const publicStateChanges = getSubObjectChanges(gameStateChanges, [typedPath<GameState>().publicState.toString()])
@@ -143,7 +146,7 @@ export default class GameHost {
                 }
 
 
-                if (this.gameSync.updateSended) {
+                if (this.gameSync.updateSended || gameChanges.length > 0) {
                     db.updateGame(this.game)
                 }
                 if (this.gameState) {

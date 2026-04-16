@@ -46,9 +46,12 @@ export function createDeepProxy<T extends object>(target: T, callback: (change: 
             return item;
         },
         set(target, property, newValue) {
+            const oldVal = Reflect.get(target, property)
             Reflect.set(target, property, newValue)
             const fullPath = [...path, property] as PropPath
-            callback({ path: fullPath, value: newValue });
+            if (oldVal != newValue) {
+                callback({ path: fullPath, value: newValue });
+            }
             return true;
         }
     });

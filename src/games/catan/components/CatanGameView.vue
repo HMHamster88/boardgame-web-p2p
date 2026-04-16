@@ -2,8 +2,9 @@
 
     <div class="flex-auto mb-2">
         <CatanHexGrid v-if="gameState.field" :field="gameState.field" @road-overlay-click="roadOverlayClick"
-            :players="game.players" @intersection-overlay-click="intersectionOverlayClick" @hex-click="hexClick"
-            :all-dice-value="allDiceValue"></CatanHexGrid>
+            :longest-road="gameState.longestRoad" :players="game.players"
+            @intersection-overlay-click="intersectionOverlayClick" @hex-click="hexClick" :all-dice-value="allDiceValue">
+        </CatanHexGrid>
     </div>
 
     <div class="flex justify-center items-center mb-2">{{ status }}</div>
@@ -14,7 +15,7 @@
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
         <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
-        }}</Button>
+            }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
@@ -34,6 +35,7 @@
     </div>
     <CatanResourceCards v-if="playerPrivateState && playerPrivateState.resources" v-model="selectedResorceCards"
         :resources="playerPrivateState.resources" :development-cards="playerPrivateState.developmentCards"
+        :special-cards="publicPlayerState?.specialCards"
         :opened-development-cards="publicPlayerState?.openedDevelopmentCards!" v-on:use-dev-card="useDevCard"
         :is-local-player-turn="isLocalPlayerTurn">
     </CatanResourceCards>
@@ -591,7 +593,7 @@ const isLocalPlayerTurn = computed(() => {
 })
 
 const publicPlayerState = computed(() => {
-    return props.gameState.playersStates[props.localPlayerIndex]
+    return props.gameState.playersStates[props.localPlayerIndex]!
 })
 
 const props = defineProps({
