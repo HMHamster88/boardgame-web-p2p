@@ -15,13 +15,18 @@
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
         <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
-            }}</Button>
+        }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
                     class="flex items-center gap-2 px-2 py-3 hover:bg-emphasis cursor-pointer rounded-border"
                     :class="{ 'buy-item-dsabled': !canBuyItem(item) }" v-on:click="buyItemClick(item)">
-                    <p>{{ t('buyItems.' + item.type) }}</p>
+                    <div style="width: 1rem;" class="flex items-center justify-center">
+                        {{ availableBuyItems[item.type] == undefined ? '∞' : availableBuyItems[item.type] }}
+                    </div>
+                    <div style="width: 2rem;" class="flex items-center justify-center">
+                        <img :src="buyItemImages[item.type]" :style="buyItemImageStyle(item)"></img>
+                    </div>
                     <div v-for="resource in getFlatResources(item.resources)" class="flex items-center">
                         <img :src="resourcesImages[resource]" style="width: 24px; height: 24px;" />
                     </div>
@@ -62,6 +67,7 @@ import SelectPlayersDialog from '../../../components/SelectPlayersDialog.vue';
 import type Game from '../../../db/game';
 import type { GameAction } from '../../../services/messages';
 import { rangeArray, recordEntries, recordValues, removeElement } from '../../../utils/arrayUtils';
+import { parseColor, rgbToHsl } from '../../../utils/colorUtils';
 import {
     findByCoords,
     getEdgeNeighborhoodsPositions,
@@ -101,11 +107,11 @@ import {
     type CatanRoad,
     type CatanTerrainHex
 } from '../types/types';
-import { getPlayerPrices } from '../types/utils';
+import { getAvailableBuyItems, getPlayerPrices } from '../types/utils';
 import CatanHexGrid from './CatanHexGrid.vue';
 import CatanResourceCards from './CatanPlayerCards.vue';
 import CatanTradeDialog from './CatanTradeDialog.vue';
-import { resourcesImages } from './graphics';
+import { buyItemImages, resourcesImages } from './graphics';
 import PlayerTradeOfferDialog from './PlayerTradeOfferDialog.vue';
 import TradeOfferAnswerDialog from './TradeOfferAnswerDialog.vue';
 
@@ -309,6 +315,8 @@ const embarkData = ref<EmbarkData>({
 
 const buyItems = ref(getBuyItems())
 
+const availableBuyItems = computed(() => getAvailableBuyItems(localPlayer.value.userId, props.gameState.field))
+
 const buyClick = (event: Event) => {
     buildItemType.value = undefined
     buyMenu.value?.toggle(event)
@@ -326,11 +334,20 @@ function buyItemClick(item: CatanBuyItem) {
     buyMenu.value?.hide()
 }
 
+function buyItemImageStyle(item: CatanBuyItem) {
+    const color = rgbToHsl(parseColor(localPlayer.value.color)!)
+    const hueRotate = item.type == CatanBuyItemType.DEVELOPMENT_CARD ? 0 : color.h
+    const imageRoatate = item.type == CatanBuyItemType.ROAD ? -90 : 0
+    return `height: 24px; transform: rotate(${imageRoatate}deg); filter: hue-rotate(${hueRotate}deg);`
+}
+
 function canBuyItem(item: CatanBuyItem): boolean {
-    return recordEntries(item.resources).every(([resourceType, resourceCount]) => {
-        const playerResource = props.playerPrivateState.resources[resourceType]
-        return playerResource >= resourceCount
-    })
+    const availableItemCount = availableBuyItems.value[item.type]
+    return (availableItemCount == undefined || availableItemCount > 0) &&
+        recordEntries(item.resources).every(([resourceType, resourceCount]) => {
+            const playerResource = props.playerPrivateState.resources[resourceType]
+            return playerResource >= resourceCount
+        })
 }
 
 function endTurn() {

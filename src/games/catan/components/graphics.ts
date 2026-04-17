@@ -24,7 +24,7 @@ import cityImg from '../assets/intersection-objects/city.png'
 import settlementImg from '../assets/intersection-objects/settlement.png'
 
 import { CatanTerrainHexType } from "../types/catanTerrainHexType"
-import { CatanDevelopmentCardType, CatanHarbourType, CatanIntersectionObjectType, CatanResourceType, CatanSpecialCard } from '../types/types'
+import { CatanBuyItemType, CatanDevelopmentCardType, CatanHarbourType, CatanIntersectionObjectType, CatanResourceType, CatanSpecialCard } from '../types/types'
 
 export const portImage = portImg
 export const roadImage = roadImg
@@ -73,6 +73,13 @@ export const resourcesImages: Record<CatanResourceType, string> = {
     [CatanHarbourType.WOOL]: sheepImg,
     [CatanHarbourType.GRAIN]: wheatImg,
     [CatanHarbourType.WOOD]: woodImg,
+}
+
+export const buyItemImages: Record<CatanBuyItemType, string> = {
+    [CatanBuyItemType.ROAD]: roadImage,
+    [CatanBuyItemType.DEVELOPMENT_CARD]: kinghtImg,
+    [CatanBuyItemType.SETTLEMENT]: settlementImg,
+    [CatanBuyItemType.CITY]: cityImg
 }
 
 export const terrainImages = [

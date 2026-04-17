@@ -3,12 +3,14 @@ import { recordEntries, recordForeach as recordForEach, removeElement } from "..
 import { findByCoordsArray, getEdgeVerticesPositions, getVertexEdgesPositions } from "../../commonTypes/hex-grid/geometry";
 import { Vector2D, type Vector2DLike } from "../../commonTypes/vector2d";
 import {
+    CatanBuyItemType,
     catanHarbourResourceType,
     CatanIntersectionObjectType,
     CatanResourceType,
     CatanTradeType,
     initResourcePrices,
     initResources,
+    maxBuyItem,
     type CatanField,
     type CatanResourcePrices,
     type CatanResources,
@@ -108,7 +110,6 @@ function processRoad(playerId: string, playerRoads: CatanRoad[], field: CatanFie
     const roadVertsPos = getEdgeVerticesPositions(roadNode.road.position)
     for (let vertPos of roadVertsPos) {
         const int = field.intersections.find(int => Vector2D.equals(int.position, vertPos))
-        // Пересестить в поиск путей
         const nonPlayerObj = int?.intersectionObjects.filter(obj => obj.playerId != playerId)
 
         let intersectNode = part.intersects.find(int => Vector2D.equals(int.position, vertPos))
@@ -226,3 +227,31 @@ export function findLongestRoad(players: Player[], field: CatanField, minLength:
     return longestPath.road.map(edge => edge.road)
 }
 
+export function getPlayerIntObjects(playerId: string, field: CatanField) {
+    return field.intersections.flatMap(int => int.intersectionObjects).filter(obj => obj.playerId == playerId)
+}
+
+export function getAvailableBuyItems(playerId: string, field: CatanField): Record<CatanBuyItemType, number | undefined> {
+    const result = {} as Record<CatanBuyItemType, number | undefined>
+    const playerIntObjects = getPlayerIntObjects(playerId, field)
+    Object.entries(maxBuyItem).forEach(([key, value]) => {
+        const buyItemType = key as CatanBuyItemType
+        const maxCount = value as number | undefined
+        switch (buyItemType) {
+            case CatanBuyItemType.ROAD:
+                const roadsCount = field.roads.filter(road => road.playerId == playerId).length
+                result[buyItemType] = maxCount! - roadsCount
+                return
+            case CatanBuyItemType.SETTLEMENT:
+                const settlementCount = playerIntObjects.filter(obj => obj.type == CatanIntersectionObjectType.SETTLEMENT).length
+                result[buyItemType] = maxCount! - settlementCount
+                return
+            case CatanBuyItemType.CITY:
+                const cityCount = playerIntObjects.filter(obj => obj.type == CatanIntersectionObjectType.CITY).length
+                result[buyItemType] = maxCount! - cityCount
+                return
+        }
+        result[buyItemType] = undefined
+    })
+    return result
+}

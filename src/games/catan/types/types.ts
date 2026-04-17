@@ -238,6 +238,13 @@ export enum CatanBuyItemType {
     DEVELOPMENT_CARD = 'DEVELOPMENT_CARD'
 }
 
+export const maxBuyItem: Record<CatanBuyItemType, number | undefined> = {
+    [CatanBuyItemType.ROAD]: 15,
+    [CatanBuyItemType.DEVELOPMENT_CARD]: undefined,
+    [CatanBuyItemType.SETTLEMENT]: 5,
+    [CatanBuyItemType.CITY]: 4
+}
+
 export function buyItemToIntersectionObject(item: CatanBuyItemType): CatanIntersectionObjectType | undefined {
     return CatanBuyItemType[item] as any as CatanIntersectionObjectType
 }

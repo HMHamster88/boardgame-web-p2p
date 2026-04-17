@@ -95,7 +95,7 @@ const backgroundHexString = computed(() => {
     }
     const minMax = getMinMax(hexGridData.value.hexes, props.hexSize)
     const center = new Vector2D(minMax.min.x + minMax.max.x, minMax.min.y + minMax.max.y).multiplied(0.5)
-    const size = (minMax.max.x - minMax.min.x + props.hexSize * 4) / 2 + 10
+    const size = (minMax.max.x - minMax.min.x + props.hexSize * 4) / 2 + 50
     return vectorArrayToString(hexagonFlat().map(v => v.multiplied(size).added(center)))
 })
 
