@@ -188,7 +188,7 @@ const props = defineProps({
     },
     longestRoad: {
         type: Object as PropType<Array<CatanRoad>>,
-        required: true
+        required: false
     }
 })
 
