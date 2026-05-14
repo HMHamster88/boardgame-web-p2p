@@ -1,6 +1,6 @@
 <template>
-    <svg width="100%" height="500" :viewBox="computedViewBox" preserveAspectRatio="xMidYMid meet" class="grid"
-        version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100%" :viewBox="computedViewBox" preserveAspectRatio="xMidYMid meet" class="grid" version="1.1"
+        xmlns="http://www.w3.org/2000/svg">
         <defs>
             <pattern v-for="image in terrainImages" :id="image.type" patternUnits="userSpaceOnUse" :x="-hexSize"
                 :y="-hexSize" :width="hexSize * 2" :height="hexSize * 2">
@@ -180,7 +180,7 @@ const props = defineProps({
     },
     viewBoxMargin: {
         type: Number,
-        default: 80
+        default: 110
     },
     allDiceValue: {
         type: Number,
@@ -209,5 +209,9 @@ const emit = defineEmits({
 <style scoped>
 .water {
     fill: #3B90C7;
+}
+
+.grid {
+    max-height: 500px;
 }
 </style>

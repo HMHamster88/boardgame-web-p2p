@@ -9,11 +9,11 @@
 <script setup lang="ts">
 import { computed, type PropType } from 'vue';
 
-import { intersectionObjectsImages } from './graphics'
+import type { Player } from '../../../db/player';
+import { parseColor, rgbToHsl } from '../../../utils/colorUtils';
 import { pointyHexToPixel } from '../../commonTypes/hex-grid/geometry';
 import type { CatanIntersection, CatanIntersectionObject } from '../types/types';
-import { parseColor, rgbToHsl } from '../../../utils/colorUtils';
-import type { Player } from '../../../db/player';
+import { intersectionObjectsImages } from './graphics';
 
 
 const position = computed(() => {
@@ -35,7 +35,7 @@ function getFilter(obj: CatanIntersectionObject) {
 }
 
 const size = computed(() => {
-    return props.hexSize / 2
+    return props.hexSize / 2.5
 })
 
 const props = defineProps({

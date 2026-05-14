@@ -9,13 +9,15 @@
 
     <div class="flex justify-center items-center mb-2">{{ status }}</div>
     <div class="flex gap-2 justify-center items-center">
-        <Button v-if="showEmbarkButton" @click="embark" :disabled="!canEmbark">{{ t('embark') }}</Button>
         <div :class="diceContainerClass" v-on:click="rollDices">
             <Dice color="#ee3232" :result="dices.redDice" :highlight="canRollDices"></Dice>
             <Dice color="#FFFF00" :result="dices.yellowDice"></Dice>
         </div>
+    </div>
+    <div class="flex gap-2 justify-center items-center">
+        <Button v-if="showEmbarkButton" @click="embark" :disabled="!canEmbark">{{ t('embark') }}</Button>
         <Button v-on:click="buyClick" :disabled="!canBuy">{{ buildItemType == undefined ? t('buy') : t('cancel')
-        }}</Button>
+            }}</Button>
         <Popover ref="buyMenu">
             <ul class="list-none p-0 m-0 flex flex-col">
                 <li v-for="item in buyItems"
